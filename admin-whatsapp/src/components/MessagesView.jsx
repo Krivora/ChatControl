@@ -1,9 +1,29 @@
-// MessagesView.jsx
 import React, { useState, useEffect } from "react";
 import ChatWindow from "./ChatWindow";
 
-function Ponderacion({ darkMode, client }) {
-  if (!client)
+// 🔹 Formatea el texto igual que en ChatWindow
+const formatText = (text) => {
+  if (!text) return null;
+  const lines = text.split(/\r?\n/);
+  return lines.map((line, idx) => {
+    const listMatch = line.match(/^\d+️⃣\s*(.*)/);
+    if (listMatch) {
+      return (
+        <li key={idx} style={{ marginBottom: "4px" }}>
+          {listMatch[1]}
+        </li>
+      );
+    }
+    return (
+      <div key={idx} style={{ marginBottom: "4px", whiteSpace: "pre-wrap" }}>
+        {line}
+      </div>
+    );
+  });
+};
+
+function Ponderacion({ darkMode, messages }) {
+  if (!messages || messages.length === 0)
     return (
       <div
         style={{
@@ -11,7 +31,7 @@ function Ponderacion({ darkMode, client }) {
           borderRadius: "8px",
           backgroundColor: darkMode ? "#2a2a2a" : "#f5f5f5",
           color: darkMode ? "#fff" : "#333",
-          height: "100%",
+          height: "90%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -22,9 +42,54 @@ function Ponderacion({ darkMode, client }) {
           textAlign: "center",
         }}
       >
-        Favor de seleccionar un cliente para ver la ponderación
+        No hay preguntas para mostrar
       </div>
     );
+
+  // 🔹 Excluir claves que no quieres mostrar
+  const mensajesFiltrados = messages.filter(
+    (msg) => msg.clave !== "saludo_inicial" && msg.clave !== "pregunta_nombre"
+  );
+
+  let valor = 25; // valor inicial
+  const bloques = [];
+
+  // 🔹 Agrupar pregunta + respuesta
+  for (let i = 0; i < mensajesFiltrados.length; i += 2) {
+    const pregunta = mensajesFiltrados[i];
+    const respuesta = mensajesFiltrados[i + 1]; // puede ser undefined
+
+    const valorActual = valor;
+
+    bloques.push(
+      <div
+        key={i}
+        style={{
+          backgroundColor: darkMode ? "#333" : "#f3f3f3",
+          padding: "10px",
+          borderRadius: "6px",
+        }}
+      >
+        {pregunta && (
+          <div style={{ marginBottom: "5px" }}>
+            <strong>Pregunta:</strong>
+            <div>{pregunta.text}</div>
+          </div>
+        )}
+
+        {respuesta && (
+          <div style={{ marginBottom: "5px" }}>
+            <strong>Respuesta:</strong>
+            <div>{respuesta.text}</div>
+          </div>
+        )}
+
+        <p style={{ fontWeight: "bold" }}>Valor = {valorActual} puntos</p>
+      </div>
+    );
+
+    valor += 20;
+  }
 
   return (
     <div
@@ -39,32 +104,12 @@ function Ponderacion({ darkMode, client }) {
         boxShadow: darkMode
           ? "0 0 5px rgba(255,255,255,0.05)"
           : "0 0 5px rgba(0,0,0,0.08)",
-        height: "100%",
+        height: "90%",
+        overflowY: "auto",
       }}
     >
       <h3 style={{ color: darkMode ? "#fff" : "#1a1a1a" }}>Ponderación</h3>
-      <div
-        style={{
-          backgroundColor: darkMode ? "#333" : "#f3f3f3",
-          padding: "10px",
-          borderRadius: "6px",
-        }}
-      >
-        <strong>Pregunta 1:</strong>
-        <p>¿Cuál sería el máximo que podrías dar de pago inicial? 💵</p>
-        <p>Valor = {client.id * 10 + 15} puntos</p>
-      </div>
-      <div
-        style={{
-          backgroundColor: darkMode ? "#333" : "#f3f3f3",
-          padding: "10px",
-          borderRadius: "6px",
-        }}
-      >
-        <strong>Pregunta 2:</strong>
-        <p>💳 ¿Cuál sería tu MÁXIMO de mensualidad?</p>
-        <p>Valor = {client.id * 8 + 14} puntos</p>
-      </div>
+      {bloques}
     </div>
   );
 }
@@ -73,21 +118,23 @@ export default function MessagesView({ darkMode }) {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [messages, setMessages] = useState([]);
 
-  // 🔹 Fetch clientes desde backend
+  // 🔹 Fetch clientes
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const res = await fetch("http://192.168.45.60:5000/clients"); // Cambia localhost por tu IP si es necesario
+        const res = await fetch("http://192.168.45.60:5000/clients");
         const data = await res.json();
         setClients(data);
       } catch (err) {
-        console.error("Error al cargar clientes:", err);
+        console.error(err);
       }
     };
     fetchClients();
   }, []);
 
+  // 🔹 Detecta mobile
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
@@ -95,6 +142,23 @@ export default function MessagesView({ darkMode }) {
   }, []);
 
   const showPlaceholder = !selectedClient;
+
+  // 🔹 Fetch mensajes cuando cambia el cliente
+  useEffect(() => {
+    if (!selectedClient) return;
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/clients/${selectedClient.id}/messages`
+        );
+        const data = await res.json();
+        setMessages(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchMessages();
+  }, [selectedClient]);
 
   return (
     <div
@@ -110,7 +174,7 @@ export default function MessagesView({ darkMode }) {
           : selectedClient
           ? "2fr 3fr 2fr"
           : "1fr 5fr",
-        height: "95%",
+        height: "75vh", 
       }}
     >
       {/* Clientes */}
@@ -127,7 +191,7 @@ export default function MessagesView({ darkMode }) {
             boxShadow: darkMode
               ? "0 0 5px rgba(255,255,255,0.05)"
               : "0 0 5px rgba(0,0,0,0.08)",
-            height: "95%",
+            height: "90%",
             overflowY: "auto",
           }}
         >
@@ -164,7 +228,7 @@ export default function MessagesView({ darkMode }) {
         </div>
       )}
 
-      {/* Placeholder o Chat + Ponderación */}
+      {/* Chat + Ponderación */}
       {showPlaceholder ? (
         <div
           style={{
@@ -172,7 +236,7 @@ export default function MessagesView({ darkMode }) {
             borderRadius: "8px",
             backgroundColor: darkMode ? "#2a2a2a" : "#f5f5f5",
             color: darkMode ? "#fff" : "#333",
-            height: "95%",
+            height: "90%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -195,7 +259,7 @@ export default function MessagesView({ darkMode }) {
               justifyContent: "flex-start",
               padding: "0px",
               borderRadius: "8px",
-              height: "95%",
+              height: "90%",
               overflowY: "auto",
             }}
           >
@@ -223,11 +287,11 @@ export default function MessagesView({ darkMode }) {
               display: "flex",
               flexDirection: "column",
               justifyContent: "flex-start",
-              height: "95%",
+              height: "90%",
               overflowY: "auto",
             }}
           >
-            <Ponderacion darkMode={darkMode} client={selectedClient} />
+            <Ponderacion darkMode={darkMode} messages={messages} />
           </div>
         </>
       )}
