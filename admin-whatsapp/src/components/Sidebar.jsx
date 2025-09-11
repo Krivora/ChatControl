@@ -33,7 +33,6 @@ export default function Sidebar({ darkMode, toggleDarkMode, isOpen, setIsOpen })
         minHeight: "100vh",       // 🔹 asegura que siempre llene vertical
         width: sidebarWidth,
         padding: isOpen ? "20px 15px" : "20px 0",
-        overflowY: "auto",        // 🔹 permite scroll si hay mucho contenido
         backgroundColor: darkMode ? "#1f1f1f" : "#ffffff",
         boxShadow: darkMode
           ? "2px 0 10px rgba(0,0,0,0.5)"
@@ -88,7 +87,7 @@ export default function Sidebar({ darkMode, toggleDarkMode, isOpen, setIsOpen })
                 cursor: "pointer",
                 fontWeight: "500",
                 backgroundColor: isActive
-                  ? "#c3002f"
+                  ? "#960b2b"
                   : isOpen
                   ? darkMode
                     ? "#2a2a2a"

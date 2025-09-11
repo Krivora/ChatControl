@@ -1,12 +1,13 @@
 import React from "react";
 
 export default function ChatBubble({ message, darkMode }) {
-  const isClient = message.sender === "client";
+  // Ahora true si es recibido (system), false si es enviado (client)
+  const isReceived = message.sender !== "client";
 
   return (
     <div
       style={{
-        textAlign: isClient ? "left" : "right",
+        textAlign: isReceived ? "left" : "right", // recibidos a la izquierda
         marginBottom: "5px",
       }}
     >
@@ -16,14 +17,14 @@ export default function ChatBubble({ message, darkMode }) {
           maxWidth: "70%",
           padding: "8px 12px",
           borderRadius: "12px",
-          backgroundColor: isClient
+          backgroundColor: isReceived
             ? darkMode
-              ? "#333"    // fondo para cliente en oscuro
-              : "#e0e0e0" // fondo para cliente en claro
+              ? "#333"    // gris oscuro para mensajes recibidos
+              : "#e0e0e0" // gris claro para mensajes recibidos
             : darkMode
-            ? "#4caf50"  // fondo para advisor en oscuro
-            : "#4caf50", // fondo para advisor en claro (verde)
-          color: isClient
+            ? "#4caf50"  // verde oscuro para mensajes enviados
+            : "#4caf50", // verde claro para mensajes enviados
+          color: isReceived
             ? darkMode
               ? "#fff"
               : "#000"

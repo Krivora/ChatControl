@@ -10,7 +10,7 @@ export default function Ponderacion({ messages, darkMode }) {
         background: darkMode ? "#222" : "#f4f4f4",
         borderRadius: "8px",
         padding: "10px",
-        height: "100%",
+        height: "55%",
       }}
     >
       <h3 style={{ color: darkMode ? "#fff" : "#222" }}>Ponderación</h3>
