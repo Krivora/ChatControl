@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
-import Messages from "./pages/Messages";
+import Messages from "./pages/MessagesPage";
 import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login"; 
