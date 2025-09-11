@@ -55,7 +55,7 @@ export default function App() {
           />
         }
       >
-        <Route path="/" element={<Home darkMode={darkMode} />} />
+        <Route path="/home" element={<Home darkMode={darkMode} />} />
         <Route path="/messages" element={<Messages darkMode={darkMode} />} />
         <Route path="/settings" element={<Settings darkMode={darkMode} />} />
         <Route path="/dashboard" element={<Dashboard darkMode={darkMode} />} />

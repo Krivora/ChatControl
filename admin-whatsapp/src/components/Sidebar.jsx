@@ -18,7 +18,7 @@ export default function Sidebar({ darkMode, toggleDarkMode, isOpen, setIsOpen })
   const sidebarWidth = isMobile ? (isOpen ? "140px" : "60px") : isOpen ? "220px" : "60px";
 
   const menuItems = [
-    { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
+    { id: "home", label: "Inicio", icon: <FaHome />, path: "/home" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "settings", label: "Configuración", icon: <FaCog />, path: "/settings" },
   ];
