@@ -97,53 +97,60 @@ export default function ClientsList({ clients, selectedClient, setSelectedClient
           const color = getSemaforo(porcentaje);
 
           return (
-            <li
-              key={client.id}
-              onClick={() => setSelectedClient(client)}
-              style={{
-                padding: "0.75rem 1rem",
-                marginBottom: "0.6rem",
-                borderRadius: "6px",
-                cursor: "pointer",
-                background:
-                  selectedClient?.id === client.id
-                    ? "#c3002eb7"
-                    : darkMode
-                    ? "#333"
-                    : "#fff",
-                color:
-                  selectedClient?.id === client.id
-                    ? "#fff"
-                    : darkMode
-                    ? "#fff"
-                    : "#222",
-                border:
-                  selectedClient?.id === client.id
-                    ? "2px solid #000000ff"
-                    : "1px solid #000000ff",
-                transition: "all 0.2s ease",
-                fontSize: "clamp(0.9rem, 2vw, 1.1rem)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span>{client.nombre_completo}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                {/* Ruedita de color */}
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "50%",
-                    backgroundColor: color,
-                  }}
-                ></span>
-                {/* Puntos y porcentaje */}
-                {totalPuntos} pts ({porcentaje}%)
-              </span>
-            </li>
+<li
+  key={client.id}
+  onClick={() => setSelectedClient(client)}
+  style={{
+    padding: "0.75rem 1rem",
+    marginBottom: "0.6rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    background:
+      selectedClient?.id === client.id
+        ? "#c3002eb7"
+        : darkMode
+        ? "#333"
+        : "#fff",
+    color:
+      selectedClient?.id === client.id
+        ? "#fff"
+        : darkMode
+        ? "#fff"
+        : "#222",
+    border:
+      selectedClient?.id === client.id
+        ? "2px solid #000000ff"
+        : "1px solid #000000ff",
+    transition: "all 0.2s ease",
+    fontSize: "clamp(0.9rem, 2vw, 1.1rem)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }}
+>
+  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+    {client.nombre_completo}
+    {client.completado && (
+      <span style={{ color: "limegreen" }}>✔</span>
+    )}
+  </span>
+
+  <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+    {/* Ruedita de color */}
+    <span
+      style={{
+        display: "inline-block",
+        width: "12px",
+        height: "12px",
+        borderRadius: "50%",
+        backgroundColor: color,
+      }}
+    ></span>
+    {/* Puntos y porcentaje */}
+    {totalPuntos} pts ({porcentaje}%)
+  </span>
+</li>
+
           );
         })}
       </ul>

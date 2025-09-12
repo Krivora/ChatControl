@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import ChatBubble from "../ChatBubble";
+import ChatBubble from "../messages/ChatBubble";
 
 export default function ChatWindow({ client, darkMode }) {
   const [chatMessages, setChatMessages] = useState([]);
