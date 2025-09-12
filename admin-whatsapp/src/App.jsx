@@ -7,6 +7,7 @@ import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login"; 
 import Profile from "./pages/Profile";
+import UsersPage from "./pages/UsersPage";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -65,6 +66,8 @@ export default function App() {
         />
         {/* 🔹 Redirigir rutas inválidas al home */}
         <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/usuarios" element={<UsersPage darkMode={darkMode} />} />
+
       </Route>
     </Routes>
   );

@@ -1,7 +1,7 @@
 // Sidebar.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaBars, FaHome, FaCog, FaEnvelope } from "react-icons/fa";
+import { FaBars, FaHome, FaCog, FaEnvelope, FaRegUserCircle  } from "react-icons/fa";
 
 export default function Sidebar({ darkMode, toggleDarkMode, isOpen, setIsOpen }) {
   const navigate = useNavigate();
@@ -21,6 +21,8 @@ export default function Sidebar({ darkMode, toggleDarkMode, isOpen, setIsOpen })
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/home" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "settings", label: "Configuración", icon: <FaCog />, path: "/settings" },
+    { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/usuarios" }
+
   ];
 
   const handleMenuClick = (item) => navigate(item.path);
