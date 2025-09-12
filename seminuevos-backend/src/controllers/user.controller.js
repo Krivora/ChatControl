@@ -12,22 +12,32 @@ const getAllUsers = async (req, res) => {
 };
 
 // POST /api/users
-  const createUser = async (req, res) => {
-    try {
-      const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
-      const newUser = await UserModel.createUser({ nombre, apellido, email, telefono, fecha_nacimiento, genero, password });
-      res.json(newUser);
-    } catch (error) {
-      console.error(error);
+const createUser = async (req, res) => {
+  try {
+    const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
+    const newUser = await UserModel.createUser({ nombre, apellido, email, telefono, fecha_nacimiento, genero, password });
+    res.json(newUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error creando usuario" });
+  }
+};
 
-      // 🔹 Si es duplicado (constraint de email)
-      if (error.code === "23505") {
-        return res.status(400).json({ message: "El correo ya está registrado" });
-      }
+// PUT /api/users/:id
+const editUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
 
-      res.status(500).json({ message: "Error creando usuario" });
-    }
-  };
+    const updatedUser = await UserModel.updateUser(id, { nombre, apellido, email, telefono, fecha_nacimiento, genero, password });
 
+    if (!updatedUser) return res.status(404).json({ message: "Usuario no encontrado" });
 
-module.exports = { getAllUsers, createUser };
+    res.json(updatedUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error actualizando usuario" });
+  }
+};
+
+module.exports = { getAllUsers, createUser, editUser };

@@ -4,12 +4,14 @@ export default function UsersPage({ darkMode }) {
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
+    id: null, // Para editar
     nombre: "",
     apellido: "",
     email: "",
     telefono: "",
     fecha_nacimiento: "",
     genero: "",
+    password: "",
   });
 
   // 🔹 Obtener usuarios
@@ -27,22 +29,45 @@ export default function UsersPage({ darkMode }) {
     fetchUsers();
   }, []);
 
-  // 🔹 Crear usuario
-    const handleSubmit = async (e) => {
+  // 🔹 Editar usuario (abre modal con datos precargados)
+  const handleEdit = (user) => {
+    setForm({
+      id: user.id,
+      nombre: user.nombre,
+      apellido: user.apellido,
+      email: user.email,
+      telefono: user.telefono,
+      fecha_nacimiento: user.fecha_nacimiento,
+      genero: user.genero,
+      password: "", // Vacío para no sobrescribir
+    });
+    setShowModal(true);
+  };
+
+  // 🔹 Crear o actualizar usuario
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const res = await fetch("http://localhost:5000/api/users", {
-        method: "POST",
+      const url = form.id
+        ? `http://localhost:5000/api/users/${form.id}` // PUT para editar
+        : "http://localhost:5000/api/users"; // POST para crear
+      const method = form.id ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        return alert(data.message); // ← aquí muestra el error
+        return alert(data.message);
       }
 
+      // Reset formulario y cerrar modal
       setForm({
+        id: null,
         nombre: "",
         apellido: "",
         email: "",
@@ -55,7 +80,7 @@ export default function UsersPage({ darkMode }) {
       fetchUsers();
     } catch (err) {
       console.error(err);
-      alert("Error creando usuario");
+      alert("Error creando/actualizando usuario");
     }
   };
 
@@ -108,6 +133,7 @@ export default function UsersPage({ darkMode }) {
           <span style={{ flex: 1 }}>Nombre</span>
           <span style={{ flex: 1 }}>Email</span>
           <span style={{ flex: 1 }}>Teléfono</span>
+          <span style={{ flex: 1 }}>Acciones</span>
         </div>
 
         {/* Body */}
@@ -126,11 +152,27 @@ export default function UsersPage({ darkMode }) {
                   borderBottom: "1px solid",
                   borderColor: darkMode ? "#333" : "#ddd",
                   color: darkMode ? "#fff" : "#222",
+                  alignItems: "center",
                 }}
               >
                 <span style={{ flex: 1 }}>{`${u.nombre} ${u.apellido}`}</span>
                 <span style={{ flex: 1 }}>{u.email}</span>
                 <span style={{ flex: 1 }}>{u.telefono}</span>
+                <span style={{ flex: 1 }}>
+                  <button
+                    onClick={() => handleEdit(u)}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: 6,
+                      border: "none",
+                      backgroundColor: "#1e90ff",
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Editar
+                  </button>
+                </span>
               </div>
             ))
           )}
@@ -162,7 +204,9 @@ export default function UsersPage({ darkMode }) {
               boxShadow: "0 0 10px rgba(0,0,0,0.3)",
             }}
           >
-            <h3 style={{ marginBottom: 15, color: darkMode ? "#fff" : "#222" }}>Agregar Usuario</h3>
+            <h3 style={{ marginBottom: 15, color: darkMode ? "#fff" : "#222" }}>
+              {form.id ? "Editar Usuario" : "Agregar Usuario"}
+            </h3>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input
                 type="text"
@@ -217,7 +261,7 @@ export default function UsersPage({ darkMode }) {
                 value={form.password || ""}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 style={{ padding: 8, borderRadius: 6, border: "1px solid #ccc" }}
-                required
+                required={!form.id} // obligatorio solo si es nuevo usuario
               />
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
