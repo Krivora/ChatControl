@@ -89,12 +89,17 @@ export default function MessagesPage({ darkMode }) {
         )}
       </div>
 
-      {/* Ponderación solo si hay cliente seleccionado */}
-      {!showPlaceholder && (
-        <div style={{ height: "100%", overflowY: "auto" }}>
-          <Ponderacion darkMode={darkMode} messages={messages} loading={loadingMessages} />
-        </div>
-      )}
+        {/* Ponderación solo si hay cliente seleccionado */}
+        {!showPlaceholder && (
+          <div style={{ height: "100%", overflowY: "auto" }}>
+            <Ponderacion
+              client={selectedClient}  // <--- PASAR EL CLIENTE AQUÍ
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+
+
     </div>
   );
 }
