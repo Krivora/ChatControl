@@ -7,14 +7,28 @@ export default function Login({ darkMode, onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (username === "admin" && password === "1234") {
-      onLogin({ username });
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: username, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.message || "Error al iniciar sesión");
     } else {
-      setError("Usuario o contraseña incorrectos");
+      onLogin(data); // guarda info del usuario logueado
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setError("Error de conexión");
+  }
+};
+
 
   const containerStyle = {
     display: "flex",
