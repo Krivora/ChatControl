@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { getAllClients, getClientMessages} = require("../controllers/client.controller");
+const { getAllClients } = require("../controllers/client.controller");
 
+// Ruta GET para traer todos los clientes
 router.get("/", getAllClients);
-router.get("/:id/messages", getClientMessages);
 
 module.exports = router;

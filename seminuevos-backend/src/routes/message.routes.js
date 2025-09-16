@@ -1,7 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { getAllMessages } = require("../controllers/message.controller");
+const { getMessagesByConversation, getAnswersByConversation } = require("../controllers/message.controller");
 
-router.get("/", getAllMessages);
+// Mensajes por conversación
+router.get("/conversation/:id", getMessagesByConversation);
+
+// Respuestas por conversación
+router.get("/answers/:id", getAnswersByConversation);
 
 module.exports = router;

@@ -1,13 +1,41 @@
-const MessageModel = require("../models/message.model");
+const pool = require("../config/db");
 
-const getAllMessages = async (req, res) => {
+// Traer todos los mensajes de una conversación
+const getMessagesByConversation = async (req, res) => {
+  const conversationId = parseInt(req.params.id);
+  if (isNaN(conversationId)) {
+    return res.status(400).json({ message: "ID de conversación inválido" });
+  }
+
   try {
-    const messages = await MessageModel.getMessages();
-    res.json(messages);
+    const result = await pool.query(
+      "SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC",
+      [conversationId]
+    );
+    res.json(result.rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error al tratar de obtener los mensajes" });
+    res.status(500).json({ message: "Error al obtener mensajes" });
   }
 };
 
-module.exports = { getAllMessages };
+// Traer las respuestas ya convertidas de una conversación
+const getAnswersByConversation = async (req, res) => {
+  const conversationId = parseInt(req.params.id);
+  if (isNaN(conversationId)) {
+    return res.status(400).json({ message: "ID de conversación inválido" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM answers WHERE conversation_id = $1 ORDER BY created_at ASC",
+      [conversationId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener respuestas" });
+  }
+};
+
+module.exports = { getMessagesByConversation, getAnswersByConversation };

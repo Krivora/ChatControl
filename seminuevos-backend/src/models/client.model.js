@@ -1,17 +1,17 @@
 const pool = require("../config/db");
 
 const getClients = async () => {
-  const result = await pool.query("SELECT * FROM perfiles_usuarios");
+  const result = await pool.query(`
+    SELECT 
+      c.*, 
+      co.id AS conversation_id,
+      co.status AS conversation_status
+    FROM customers c
+    LEFT JOIN conversations co 
+      ON co.customer_id = c.id 
+      AND co.status IN ('active', 'finish')
+  `);
   return result.rows;
 };
 
-
-const getClientMessages = async (clientId) => {
-  const result = await pool.query(
-    "SELECT * FROM interacciones WHERE perfil_id = $1 ORDER BY created_at ASC",
-    [clientId]
-  );
-  return result.rows;
-};
-
-module.exports = { getClients, getClientMessages };
+module.exports = { getClients };
