@@ -19,6 +19,8 @@ export const env = {
   PG_HOST: process.env.PG_HOST,
   PG_PORT: Number(process.env.PG_PORT || 5432),
   PG_DATABASE: process.env.PG_DATABASE,
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "1d",
 
   // SSL: con DO suele ser "require"
   PG_SSL: process.env.PG_SSL,          // p.ej. "require"

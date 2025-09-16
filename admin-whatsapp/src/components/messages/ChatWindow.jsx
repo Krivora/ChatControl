@@ -1,91 +1,96 @@
-import React, { useState, useEffect } from "react";
-import ChatBubble from "../messages/ChatBubble";
+import React, { useState, useRef, useEffect } from "react";
 
-export default function ChatWindow({ client, darkMode }) {
-  const [chatMessages, setChatMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState(""); // 🔹 debe ser string, no array
+// ...existing code...
+export default function ChatWindow({ chat, darkMode }) {
+  const [input, setInput] = useState("");
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    if (!client?.conversation_id) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
 
-    let isMounted = true;
-
-    const fetchChat = async () => {
-      try {
-        const [resMessages, resAnswers] = await Promise.all([
-          fetch(`http://localhost:5000/api/messages/conversation/${client.conversation_id}`),
-          fetch(`http://localhost:5000/api/messages/answers/${client.conversation_id}`)
-        ]);
-
-        const messages = await resMessages.json();
-        const answers = await resAnswers.json();
-        const answersCopy = [...answers];
-
-        const chatData = messages.map(msg => {
-          if (msg.sender === "bot") {
-            return { sender: "system", text: msg.content, created_at: msg.created_at };
-          } else {
-            let text = msg.content;
-
-            if (answersCopy.length > 0) {
-              const nextAnswer = answersCopy[0];
-              const msgTime = new Date(msg.created_at).getTime();
-              const answerTime = new Date(nextAnswer.created_at).getTime();
-
-              if (msgTime >= answerTime) {
-                text = nextAnswer.answer_value;
-                answersCopy.shift();
-              }
-            }
-
-            return { sender: "client", text, created_at: msg.created_at };
-          }
-        });
-
-        if (isMounted) setChatMessages(chatData);
-      } catch (err) {
-        console.error("Error al cargar chat:", err);
-      }
-    };
-
-    fetchChat();
-
-    return () => {
-      isMounted = false;
-      setChatMessages([]);
-    };
-  }, [client]);
-
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
-
-    const newMsg = { text: newMessage, sender: "client", created_at: new Date().toISOString() };
-    setChatMessages([...chatMessages, newMsg]);
-    setNewMessage("");
-  };
-
-  if (!client) return <p>Selecciona un cliente para ver el chat</p>;
+  if (!chat) {
+    return (
+      <div className="flex flex-1 items-center justify-center text-gray-500 h-full">
+        Selecciona una conversación
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "55%", borderRadius: 8, backgroundColor: darkMode ? "#1f1f1f" : "#fff", padding: 10 }}>
-      <h3 style={{ color: darkMode ? "#fff" : "#000" }}>Chat con {client.full_name}</h3>
-      <div style={{ flex: 1, overflowY: "auto", marginBottom: 10, backgroundColor: darkMode ? "#121212" : "#f9f9f9", borderRadius: 8, padding: 10 }}>
-        {chatMessages.map((msg, idx) => (
-          <ChatBubble key={idx} message={msg} darkMode={darkMode} />
-        ))}
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div
+        className={`p-4 border-b font-semibold flex-shrink-0 ${
+          darkMode
+            ? "bg-[#1f1f1f] border-gray-700 text-white"
+            : "bg-white border-gray-200 text-gray-900"
+        }`}
+      >
+        {chat.customer?.nombre || "Cliente"}
       </div>
-      <div style={{ display: "flex", gap: 5 }}>
+
+      {/* Mensajes */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 scrollbar-hidden">
+        {chat.messages.map((msg) => {
+          const isCustomer = msg.sender === "customer";
+          const isBot = msg.sender === "bot";
+
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${isCustomer ? "justify-start" : "justify-end"}`}
+            >
+              <div
+                className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${
+                  isCustomer
+                    ? darkMode
+                      ? "bg-[#2a2a2a] text-white rounded-bl-none"
+                      : "bg-gray-200 text-gray-900 rounded-bl-none"
+                    : isBot
+                    ? "bg-[#960b2b] text-white rounded-br-none"
+                    : "bg-blue-500 text-white rounded-br-none"
+                }`}
+              >
+                <p className="whitespace-pre-line">{msg.content}</p>
+                <span className="text-[11px] opacity-70 block mt-1 text-right">
+                  {new Date(msg.created_at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div
+        className={`p-3 flex gap-2 border-t flex-shrink-0 ${
+          darkMode
+            ? "bg-[#1f1f1f] border-gray-700"
+            : "bg-white border-gray-200"
+        }`}
+        style={{ minHeight: 56 }}
+      >
         <input
           type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Escribe un mensaje..."
-          style={{ flex: 1, padding: 8, borderRadius: 6, border: darkMode ? "1px solid #333" : "1px solid #ccc", backgroundColor: darkMode ? "#1a1a1a" : "#fff", color: darkMode ? "#fff" : "#000" }}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${
+            darkMode
+              ? "bg-[#2a2a2a] text-white"
+              : "bg-gray-100 text-gray-900"
+          }`}
         />
-        <button onClick={handleSend} style={{ padding: "8px 12px", borderRadius: 6, border: "none", backgroundColor: "#4caf50", color: "#fff", cursor: "pointer" }}>
+        <button className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]">
           Enviar
         </button>
       </div>
     </div>
   );
 }
+// ...existing code...

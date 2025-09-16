@@ -1,34 +1,36 @@
 import React, { useState } from "react";
-import logoLight from "../assets/logo.png"; // reemplaza con tu logo claro
-import logoDark from "../assets/logo.png";   // reemplaza con tu logo oscuro
+import logoLight from "../assets/logo.png";
+import logoDark from "../assets/logo.png";
+import { login } from "../api/auth"; // 👈 importa tu función
+import { useNavigate } from "react-router-dom";
 
 export default function Login({ darkMode, onLogin }) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");     // 👈 email en lugar de username
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: username, password })
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    const data = await res.json();
+    try {
+      const { user, token } = await login(email, password);
 
-    if (!res.ok) {
-      setError(data.message || "Error al iniciar sesión");
-    } else {
-      onLogin(data); // guarda info del usuario logueado
+      // Guardamos en localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      if (onLogin) onLogin(user);
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-    setError("Error de conexión");
-  }
-};
-
+  };
 
   const containerStyle = {
     display: "flex",
@@ -42,7 +44,7 @@ const handleSubmit = async (e) => {
 
   const cardStyle = {
     backgroundColor: darkMode ? "#1f1f1f" : "#fff",
-    padding: window.innerWidth < 360 ? "30px 20px" : "40px 30px",
+    padding: "2em",
     borderRadius: "15px",
     boxShadow: darkMode
       ? "0 4px 20px rgba(0,0,0,0.5)"
@@ -52,10 +54,10 @@ const handleSubmit = async (e) => {
     textAlign: "center",
   };
 
-
   const logoStyle = {
-    width: "120px",
+    width: "50%",
     marginBottom: "20px",
+    marginLeft: "5em",
   };
 
   const inputStyle = {
@@ -110,11 +112,12 @@ const handleSubmit = async (e) => {
         <h1 style={titleStyle}>🔐 Iniciar Sesión</h1>
         <form onSubmit={handleSubmit}>
           <input
-            type="text"
-            placeholder="Usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            placeholder="Correo electrónico"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             style={inputStyle}
+            required
           />
           <input
             type="password"
@@ -122,9 +125,10 @@ const handleSubmit = async (e) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
+            required
           />
-          <button type="submit" style={buttonStyle}>
-            Ingresar
+          <button type="submit" style={buttonStyle} disabled={loading}>
+            {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
         {error && <p style={errorStyle}>{error}</p>}

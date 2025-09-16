@@ -1,105 +1,48 @@
-import React, { useState, useEffect } from "react";
-import ClientsList from "../components/messages/ClientsList";
+// MessagesPage.jsx
+import React from "react";
+import ConversationList from "../components/messages/ConversationList";
 import ChatWindow from "../components/messages/ChatWindow";
-import Ponderacion from "../components/messages/Ponderacion";
-import { useClients } from "../hooks/useClients";
+import CustomerInfo from "../components/messages/CustomerInfo";
+
+import { useConversations } from "../hooks/useConversations";
+import { useConversationDetail } from "../hooks/useConversationDetail";
 
 export default function MessagesPage({ darkMode }) {
-  const { clients, selectedClient, setSelectedClient, messages, loadingClients, loadingMessages } = useClients();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // Logs
-  useEffect(() => {
-    console.log("Clientes cargados desde useClients:", clients);
-  }, [clients]);
-  useEffect(() => {
-    if (selectedClient) console.log("Cliente seleccionado:", selectedClient);
-  }, [selectedClient]);
-
-  // Detecta resize
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  if (loadingClients) return <p>Cargando clientes...</p>;
-
-  const showPlaceholder = !selectedClient;
+  const { conversations, selectedId, selectConversation } = useConversations();
+  const { chat, loading } = useConversationDetail(selectedId);
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
-        gap: "15px",
-        height: "160vh", // altura de la ventana
-        padding: "20px",
-        boxSizing: "border-box",
-        backgroundColor: darkMode ? "#121212" : "#f5f5f5",
-      }}
-    >
-      {/* Clientes */}
-      <div style={{ height: "100%", overflowY: "auto" }}>
-        <ClientsList
-          clients={clients}
-          selectedClient={selectedClient}
-          setSelectedClient={setSelectedClient}
-          darkMode={darkMode}
-        />
-      </div>
-
-      {/* Chat + Placeholder */}
-      <div
-        style={{
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          gridColumn: showPlaceholder ? "2 / 4" : "auto", // placeholder ocupa Chat + Ponderación
-        }}
-      >
-        {showPlaceholder ? (
-          <div
-            style={{
-              padding: "15px",
-              borderRadius: "8px",
-              backgroundColor: darkMode ? "#2a2a2a" : "#f5f5f5",
-              color: darkMode ? "#fff" : "#333",
-              height: "86vh", // ocupa todo el contenedor
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: darkMode
-                ? "0 0 5px rgba(255,255,255,0.05)"
-                : "0 0 5px rgba(0,0,0,0.08)",
-              fontSize: "16px",
-              textAlign: "center",
-            }}
-          >
-            Selecciona un cliente para ver el chat y la ponderación
-          </div>
-        ) : (
-          <ChatWindow
-            client={selectedClient}
-            darkMode={darkMode}
-            messages={messages}
-            fixedHeight="100%" // ChatWindow ocupa todo el contenedor
-          />
-        )}
-      </div>
-
-        {/* Ponderación solo si hay cliente seleccionado */}
-        {!showPlaceholder && (
-          <div style={{ height: "100%", overflowY: "auto" }}>
-            <Ponderacion
-              client={selectedClient}  // <--- PASAR EL CLIENTE AQUÍ
-              darkMode={darkMode}
-            />
-          </div>
-        )}
-
-
+  <div
+    className={`flex h-[calc(100vh-120px)] overflow-hidden ${
+      darkMode ? "bg-[#121212]" : "bg-gray-100"
+    }`}
+    style={{ minWidth: 900 }} // Puedes ajustar este valor
+  >
+    {/* Columna izquierda (lista) */}
+    <div className="flex-shrink-0" style={{ width: 300, minWidth: 300, maxWidth: 300 }}>
+      <ConversationList
+        conversations={conversations}
+        onSelect={selectConversation}
+        selectedId={selectedId}
+        darkMode={darkMode}
+      />
     </div>
-  );
+
+    {/* Columna central (chat) */}
+    <div className="flex-1 min-w-0" style={{ minWidth: 0 }}>
+      {loading ? (
+        <div className="flex h-full items-center justify-center text-gray-500">
+          Cargando...
+        </div>
+      ) : (
+        <ChatWindow chat={chat} darkMode={darkMode} />
+      )}
+    </div>
+
+    {/* Columna derecha (info cliente) */}
+    <div className="flex-shrink-0" style={{ width: 240, minWidth: 240, maxWidth: 240 }}>
+      <CustomerInfo chat={chat} darkMode={darkMode} />
+    </div>
+  </div>
+);
 }
