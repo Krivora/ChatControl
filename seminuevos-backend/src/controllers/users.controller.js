@@ -1,0 +1,24 @@
+// src/controllers/users.controller.js
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { UsersService } from '../services/users.service.js';
+import { ok } from '../utils/ApiResponse.js';
+
+export const register = asyncHandler(async (req, res) => {
+  const user = await UsersService.register(req);
+  return ok(res, user);
+});
+
+export const listUsers = asyncHandler(async (req, res) => {
+  const { items, meta } = await UsersService.list(req);
+  return ok(res, items, meta);
+});
+
+export const getUser = asyncHandler(async (req, res) => {
+  const user = await UsersService.get(req);
+  return ok(res, user);
+});
+
+export const login = asyncHandler(async (req, res) => {
+  const user = await UsersService.login(req);
+  return ok(res, user);
+});

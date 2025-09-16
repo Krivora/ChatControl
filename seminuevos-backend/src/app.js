@@ -1,22 +1,23 @@
-const express = require("express");
-const cors = require("cors");
-
-const userRoutes = require("./routes/user.routes"); // ← CORRECTO
-const interactionRoutes = require("./routes/interaction.routes");
-const messageRoutes = require("./routes/message.routes");
-const clientRoutes = require("./routes/client.routes");
-const authRoutes = require("./routes/auth.routes");
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import routes from './routes/index.js';
+import { notFound, errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
+app.use(cors());
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan('dev')); // o logger.js si prefieres
 
-// Rutas
-app.use("/api/users", userRoutes);          // Usuarios reales
-app.use("/api/interactions", interactionRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/clients", clientRoutes);
-app.use("/api/auth", authRoutes);
+// Healthcheck
+app.get('/health', (req, res) => res.json({ ok: true }));
 
-module.exports = app;
+// Rutas principales
+app.use('/api', routes);
+
+// Middlewares finales
+app.use(notFound);
+app.use(errorHandler);
+
+export default app;
