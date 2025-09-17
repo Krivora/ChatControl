@@ -6,11 +6,6 @@ export const ConversationsRepo = {
   async listWithLastMessage({ limit = 20, offset = 0 }) {
     const query = `
       SELECT c.id,
-             c.customer_id,
-             cu.full_name AS customer_name,
-             cu.whatsapp_id,
-             cu.created_at,
-             cu.last_interaction,
              c.status,
              (
                 SELECT m.content
@@ -27,7 +22,6 @@ export const ConversationsRepo = {
                 LIMIT 1
              ) AS last_message_time
       FROM conversations c
-      JOIN customers cu ON cu.id = c.customer_id
       ORDER BY last_message_time DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `;
@@ -41,27 +35,14 @@ export const ConversationsRepo = {
   },
 
   // 🔹 Detalle completo de una conversación
-  async getFullById(id) {
-    const convRes = await pool.query(
-      `SELECT c.id AS conversation_id, c.customer_id, c.status, c.current_step, 
-              c.started_at, c.ended_at,
-              cu.full_name, cu.whatsapp_id, cu.created_at, cu.last_interaction
-       FROM conversations c
-       JOIN customers cu ON cu.id = c.customer_id
-       WHERE c.id = $1`,
-      [id]
-    );
-
-    if (convRes.rowCount === 0) return null;
-    const conversation = convRes.rows[0];
-
+  async getFullById(conversationId) {
     // mensajes
     const messagesRes = await pool.query(
       `SELECT id, sender, content, content_type, created_at
        FROM messages
        WHERE conversation_id = $1
        ORDER BY created_at ASC`,
-      [id]
+      [conversationId]
     );
 
     // respuestas
@@ -70,8 +51,21 @@ export const ConversationsRepo = {
        FROM answers
        WHERE conversation_id = $1
        ORDER BY created_at ASC`,
-      [id]
+      [conversationId]
     );
+
+    // mapear answers a objeto { key: value }
+    const answersMap = {};
+    answersRes.rows.forEach((a) => {
+      answersMap[a.question_key] = a.answer_value;
+    });
+
+    // armar customer desde answers
+    const customer = {
+      nombre: answersMap["full_name"] || "Cliente",
+      telefono: answersMap["telefono_question"] || null,
+      email: answersMap["email_question"] || null,
+    };
 
     // ponderación básica
     const score = Math.min(100, answersRes.rowCount * 20);
@@ -84,19 +78,9 @@ export const ConversationsRepo = {
     };
 
     return {
-      customer: {
-        id: conversation.customer_id,
-        nombre: conversation.full_name,
-        whatsapp_id: conversation.whatsapp_id,
-        created_at: conversation.created_at,
-        lastInteraction: conversation.last_interaction,
-      },
+      customer,
       conversation: {
-        id: conversation.conversation_id,
-        status: conversation.status,
-        current_step: conversation.current_step,
-        started_at: conversation.started_at,
-        ended_at: conversation.ended_at,
+        id: conversationId,
       },
       messages: messagesRes.rows,
       answers: answersRes.rows,
