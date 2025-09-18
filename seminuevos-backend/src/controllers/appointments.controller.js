@@ -27,3 +27,9 @@ export const deleteAppointment = asyncHandler(async (req, res) => {
   const result = await AppointmentsService.remove(req);
   return ok(res, result);
 });
+
+// 🔹 NUEVO
+export const getDatesWithAppointments = asyncHandler(async (req, res) => {
+  const dates = await AppointmentsService.getDatesWithAppointments(req);
+  return ok(res, dates);
+});

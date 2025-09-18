@@ -18,7 +18,7 @@ export default function Sidebar({ darkMode, isOpen, setIsOpen }) {
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
-    { id: "settings", label: "Configuración", icon: <FaCog />, path: "/settings" },
+    { id: "configuration", label: "configuration", icon: <FaCog />, path: "/configuration" },
     { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
   ];
 

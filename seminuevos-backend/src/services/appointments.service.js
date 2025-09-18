@@ -39,5 +39,11 @@ export const AppointmentsService = {
     const { id } = req.params;
     await AppointmentsRepo.delete(id);
     return { success: true };
+  },
+
+  // 🔹 NUEVO
+  async getDatesWithAppointments(req) {
+    const { dateFrom, dateTo, status } = req.query;
+    return AppointmentsRepo.getDatesWithAppointments({ dateFrom, dateTo, status });
   }
 };

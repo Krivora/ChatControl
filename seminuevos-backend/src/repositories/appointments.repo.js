@@ -105,5 +105,35 @@ export const AppointmentsRepo = {
   async delete(id) {
     await pool.query(`DELETE FROM appointments WHERE id=$1`, [id]);
     return true;
+  },
+
+  // 🔹 NUEVO: obtener las fechas con citas
+  async getDatesWithAppointments({ dateFrom, dateTo, status }) {
+    const params = [];
+    const where = [];
+
+    if (dateFrom) {
+      params.push(dateFrom);
+      where.push(`date >= $${params.length}`);
+    }
+    if (dateTo) {
+      params.push(dateTo);
+      where.push(`date <= $${params.length}`);
+    }
+    if (status) {
+      params.push(status);
+      where.push(`status = $${params.length}`);
+    }
+
+    const sql = `
+      SELECT date, COUNT(*)::int AS total
+      FROM appointments
+      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+      GROUP BY date
+      ORDER BY date ASC
+    `;
+
+    const { rows } = await pool.query(sql, params);
+    return rows; // [{ date: '2025-09-18', total: 1 }, ...]
   }
 };
