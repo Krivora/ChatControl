@@ -2,11 +2,12 @@
 import { pool } from "../config/db.js";
 
 export const ConversationsRepo = {
-  // 🔹 Lista de conversaciones con último mensaje
+  // Lista de conversaciones con último mensaje y sus respuestas
   async listWithLastMessage({ limit = 20, offset = 0 }) {
     const query = `
       SELECT c.id,
              c.status,
+             cu.full_name AS customer_name,
              (
                 SELECT m.content
                 FROM messages m
@@ -20,13 +21,27 @@ export const ConversationsRepo = {
                 WHERE m.conversation_id = c.id
                 ORDER BY m.created_at DESC
                 LIMIT 1
-             ) AS last_message_time
+             ) AS last_message_time,
+             COALESCE(
+               json_agg(
+                 json_build_object('question_key', a.question_key, 'answer_value', a.answer_value)
+               ) FILTER (WHERE a.id IS NOT NULL),
+               '[]'
+             ) AS answers
       FROM conversations c
+      LEFT JOIN customers cu ON cu.id = c.customer_id
+      LEFT JOIN answers a ON a.conversation_id = c.id
+      GROUP BY c.id, cu.full_name
       ORDER BY last_message_time DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `;
+
     const result = await pool.query(query, [limit, offset]);
-    return result.rows;
+    // conv.answers viene como string JSON, así que parseamos
+    return result.rows.map(r => ({
+      ...r,
+      answers: Array.isArray(r.answers) ? r.answers : JSON.parse(r.answers),
+    }));
   },
 
   async count() {
@@ -34,9 +49,9 @@ export const ConversationsRepo = {
     return parseInt(result.rows[0].count, 10);
   },
 
-  // 🔹 Detalle completo de una conversación
+  // Detalle completo de una conversación
   async getFullById(conversationId) {
-    // mensajes
+    // Mensajes
     const messagesRes = await pool.query(
       `SELECT id, sender, content, content_type, created_at
        FROM messages
@@ -45,7 +60,7 @@ export const ConversationsRepo = {
       [conversationId]
     );
 
-    // respuestas
+    // Respuestas
     const answersRes = await pool.query(
       `SELECT id, question_key, answer_value, created_at
        FROM answers
@@ -54,20 +69,17 @@ export const ConversationsRepo = {
       [conversationId]
     );
 
-    // mapear answers a objeto { key: value }
-    const answersMap = {};
-    answersRes.rows.forEach((a) => {
-      answersMap[a.question_key] = a.answer_value;
-    });
+    // Traer customer real desde la tabla customers
+    const customerRes = await pool.query(
+      `SELECT id, full_name, whatsapp_id
+       FROM customers
+       WHERE id = (SELECT customer_id FROM conversations WHERE id=$1)`,
+      [conversationId]
+    );
 
-    // armar customer desde answers
-    const customer = {
-      nombre: answersMap["full_name"] || "Cliente",
-      telefono: answersMap["telefono_question"] || null,
-      email: answersMap["email_question"] || null,
-    };
+    const customer = customerRes.rows[0] || null;
 
-    // ponderación básica
+    // Ponderación básica (opcional)
     const score = Math.min(100, answersRes.rowCount * 20);
     const ponderacion = {
       score,
@@ -81,6 +93,7 @@ export const ConversationsRepo = {
       customer,
       conversation: {
         id: conversationId,
+        status: (await pool.query(`SELECT status FROM conversations WHERE id=$1`, [conversationId])).rows[0]?.status ?? null,
       },
       messages: messagesRes.rows,
       answers: answersRes.rows,

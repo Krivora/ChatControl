@@ -51,10 +51,11 @@ export const CustomersRepo = {
   async getById(id) {
     const { rows } = await pool.query(
       `SELECT id, whatsapp_id, full_name, created_at, last_interaction
-       FROM customers
-       WHERE id=$1`,
+      FROM customers
+      WHERE id=$1`,
       [id]
     );
     return rows[0] || null;
   }
+
 };

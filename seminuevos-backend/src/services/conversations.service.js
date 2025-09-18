@@ -21,7 +21,6 @@ export const ConversationsService = {
   async getFull(req) {
     const { id } = req.params;
     const data = await ConversationsRepo.getFullById(id);
-    if (!data) throw new ApiError(404, "Conversación no encontrada");
     return data;
   },
 };
