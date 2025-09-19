@@ -19,6 +19,11 @@ export const getUser = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const user = await UsersService.login(req);
-  return ok(res, user);
+  const data = await UsersService.login(req);
+  return ok(res, data);
+});
+
+export const updateDarkMode = asyncHandler(async (req, res) => {
+  const updated = await UsersService.updateDarkMode(req);
+  return ok(res, updated);
 });

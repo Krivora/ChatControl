@@ -8,11 +8,8 @@ import { signToken } from '../utils/jwt.js';
 export const UsersService = {
   async register(req) {
     const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
-
     const existing = await UsersRepo.getByEmail(email);
-    if (existing) {
-      throw new ApiError(400, 'El email ya está registrado');
-    }
+    if (existing) throw new ApiError(400, 'El email ya está registrado');
 
     const passwordHash = await bcrypt.hash(password, 10);
     return UsersRepo.create({ nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash });
@@ -54,9 +51,25 @@ export const UsersService = {
         id: user.id,
         nombre: user.nombre,
         apellido: user.apellido,
-        email: user.email
+        email: user.email,
+        darkMode: user.dark_mode
       },
       token
+    };
+  },
+
+  async updateDarkMode(req) {
+    const userId = req.user.id; // viene del token (requireAuth)
+    const { darkMode } = req.body;
+
+    if (typeof darkMode !== 'boolean') {
+      throw new ApiError(400, 'darkMode debe ser booleano');
+    }
+
+    const updatedUser = await UsersRepo.updateDarkMode(userId, darkMode);
+    return {
+      id: updatedUser.id,
+      darkMode: updatedUser.dark_mode
     };
   }
 };

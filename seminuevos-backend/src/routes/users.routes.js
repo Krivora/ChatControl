@@ -4,6 +4,7 @@ import { register, listUsers, getUser, login } from '../controllers/users.contro
 import { validate } from '../middlewares/validate.js';
 import { registerUserSchema, loginUserSchema } from '../validators/users.validators.js';
 import { requireAuth } from '../middlewares/auth.js';
+import { updateDarkMode } from '../controllers/users.controller.js';
 
 const r = Router();
 
@@ -16,5 +17,7 @@ r.post('/login', validate(loginUserSchema), login);
 // Listado y detalle requieren auth
 r.get('/', requireAuth, listUsers);
 r.get('/:id', requireAuth, getUser);
+
+r.patch('/dark-mode', requireAuth, updateDarkMode);
 
 export default r;
