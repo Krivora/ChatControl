@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useWhatsApp } from "../../hooks/useWhatsapp";
 
 export default function ChatWindow({ chat, darkMode }) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
+  const { sendMessage, loading } = useWhatsApp();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -16,7 +18,6 @@ export default function ChatWindow({ chat, darkMode }) {
     );
   }
 
-  // Combinar bot + answer
   const chatEntries = [];
   chat.messages
     .filter((m) => m.sender === "bot")
@@ -40,6 +41,22 @@ export default function ChatWindow({ chat, darkMode }) {
 
   chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const to = chat.customer?.whatsapp_id; // ⚡ importante
+    if (!to) {
+      alert("Este cliente no tiene número de WhatsApp registrado");
+      return;
+    }
+
+    const res = await sendMessage(to, input);
+    if (res.ok) {
+      setInput(""); // limpiar input
+      alert("✅ Mensaje enviado por WhatsApp");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
@@ -52,7 +69,6 @@ export default function ChatWindow({ chat, darkMode }) {
       >
         {chat.customer?.full_name || "Cliente"}
       </div>
-
 
       {/* Mensajes */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 scrollbar-hidden">
@@ -102,12 +118,17 @@ export default function ChatWindow({ chat, darkMode }) {
           placeholder="Escribe un mensaje..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          disabled={loading}
           className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${
             darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
           }`}
         />
-        <button className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]">
-          Enviar
+        <button
+          onClick={handleSend}
+          disabled={loading}
+          className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
+        >
+          {loading ? "Enviando..." : "Enviar"}
         </button>
       </div>
     </div>

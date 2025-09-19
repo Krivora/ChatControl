@@ -8,6 +8,7 @@ import conversations from './conversations.routes.js';
 import messages from './messages.routes.js';
 import slots from './slots.routes.js';
 import users from './users.routes.js';
+import whatsapp from './whatsapp.routes.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use('/conversations', conversations);
 router.use('/messages', messages);
 router.use('/slots', slots);
 router.use('/users', users);
+router.use('/whatsapp', whatsapp);
 
 
 export default router;

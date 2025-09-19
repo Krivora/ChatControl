@@ -1,45 +1,43 @@
-// src/components/appointments/AppointmentScheduler.jsx
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useEffect, useState, useRef } from "react";
-import { getAppointments, createAppointment } from "../../api/appointments";
+import { useState, useRef, useMemo } from "react";
+import { useAppointments } from "../../hooks/useAppointment";
+import { createAppointment } from "../../api";
 
 export default function AppointmentScheduler({ darkMode }) {
-  const [events, setEvents] = useState([]);
-  const [activeView, setActiveView] = useState("timeGridDay"); // vista seleccionada
+  const [activeView, setActiveView] = useState("timeGridDay");
   const calendarRef = useRef(null);
+  const { appointments, loading, error, reload } = useAppointments();
 
-  useEffect(() => {
-    loadAppointments();
-  }, [darkMode]);
+  const events = useMemo(
+    () =>
+      appointments.map((a) => {
+        const dateStr = a.date.split("T")[0];
+        return {
+          id: a.id,
+          title: `Cita: ${a.customer_name || "#"+a.conversation_id}`,
+          start: `${dateStr}T${a.time_start}`,
+          end: `${dateStr}T${
+            a.time_end !== "00:00:00" ? a.time_end : a.time_start
+          }`,
+          backgroundColor:
+            a.status === "confirmed"
+              ? darkMode
+                ? "#16a34a"
+                : "#22c55e"
+              : a.status === "pending"
+              ? darkMode
+                ? "#f59e0b"
+                : "#facc15"
+              : "#ef4444",
+          extendedProps: { status: a.status },
+        };
+      }),
+    [appointments, darkMode]
+  );
 
-  const loadAppointments = async () => {
-    try {
-      const data = await getAppointments();
-      const mapped = data.map((a) => ({
-        id: a.id,
-        title: `Cita: #${a.conversation_id}`,
-        start: `${a.date}T${a.time_start}`,
-        end: `${a.date}T${a.time_end}`,
-        backgroundColor:
-          a.status === "confirmed"
-            ? darkMode
-              ? "#16a34a"
-              : "#22c55e"
-            : a.status === "pending"
-            ? darkMode
-              ? "#f59e0b"
-              : "#facc15"
-            : "#ef4444",
-        extendedProps: { status: a.status },
-      }));
-      setEvents(mapped);
-    } catch (err) {
-      console.error("Error cargando citas", err);
-    }
-  };
 
   const handleSelectSlot = async (info) => {
     const date = info.startStr.split("T")[0];
@@ -50,8 +48,8 @@ export default function AppointmentScheduler({ darkMode }) {
     if (!conversationId) return;
 
     await createAppointment({ conversationId, date, timeStart, timeEnd });
-    await loadAppointments();
-    alert("✅ Cita agendada");
+    await reload();
+    alert("Cita agendada");
   };
 
   const changeView = (newView) => {
@@ -63,7 +61,7 @@ export default function AppointmentScheduler({ darkMode }) {
   const buttonClass = (viewName) =>
     `px-3 py-1 rounded ${
       activeView === viewName
-        ? "bg-[#960b2b] text-white hover:bg-[#7d0923]" // rojo si activo
+        ? "bg-[#960b2b] text-white hover:bg-[#7d0923]"
         : darkMode
         ? "bg-gray-700 text-white hover:bg-gray-600"
         : "bg-gray-300 text-gray-900 hover:bg-gray-400"
@@ -75,16 +73,9 @@ export default function AppointmentScheduler({ darkMode }) {
         darkMode ? "bg-[#1f1f1f] text-white" : "bg-white text-gray-900"
       }`}
     >
-      {/* Calendario */}
       <div className="flex-1">
         <div className="flex justify-between items-center mb-2">
-          <h1
-            className={`text-2xl font-bold ${
-              darkMode ? "text-white" : "text-gray-900"
-            }`}
-          >
-            📅 Citas
-          </h1>
+          <h1 className="text-2xl font-bold">Citas</h1>
           <div className="flex gap-2">
             <button
               className={buttonClass("timeGridDay")}
@@ -101,6 +92,9 @@ export default function AppointmentScheduler({ darkMode }) {
           </div>
         </div>
 
+        {loading && <p>Cargando citas...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -111,17 +105,19 @@ export default function AppointmentScheduler({ darkMode }) {
           slotDuration="00:30:00"
           events={events}
           select={handleSelectSlot}
-          height="75vh" // controla altura y evita scroll
+          height="75vh"
           locale="es"
           headerToolbar={{
             left: "",
             center: "",
-            right: "prev,next", // flechas a la derecha
+            right: "prev,next",
           }}
           dayHeaderClassNames={darkMode ? ["text-white"] : ["text-gray-900"]}
           slotLabelClassNames={darkMode ? ["text-gray-300"] : ["text-gray-700"]}
           dayCellClassNames={
-            darkMode ? ["bg-[#1f1f1f] border-gray-600"] : ["bg-white border-gray-200"]
+            darkMode
+              ? ["bg-[#1f1f1f] border-gray-600"]
+              : ["bg-white border-gray-200"]
           }
           eventContent={(arg) => (
             <div
@@ -143,13 +139,7 @@ export default function AppointmentScheduler({ darkMode }) {
           darkMode ? "bg-[#1f1f1f]" : "bg-gray-50"
         }`}
       >
-        <h2
-          className={`font-semibold text-lg mb-2 ${
-            darkMode ? "text-white" : "text-gray-900"
-          }`}
-        >
-          Próximas citas
-        </h2>
+        <h2 className="font-semibold text-lg mb-2">Próximas citas</h2>
         {events.length === 0 && (
           <p className={darkMode ? "text-gray-400" : "text-gray-500"}>
             No hay citas próximas

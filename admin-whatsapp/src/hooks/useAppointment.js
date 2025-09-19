@@ -1,30 +1,30 @@
-// src/hooks/useAppointment.js
-import { useState } from "react";
-import { createAppointment as createAppointmentApi } from "../api";
+// src/hooks/useAppointments.js
+import { useState, useEffect } from "react";
+import { getAppointments } from "../api";
 
-export function useAppointment() {
+export function useAppointments() {
+  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const createAppointment = async (conversationId, date, timeStart, timeEnd) => {
-    setError("");
+  const loadAppointments = async () => {
     setLoading(true);
+    setError("");
     try {
-      const res = await createAppointmentApi({
-        conversationId,
-        date,
-        timeStart,
-        timeEnd,
-      });
-      return { ok: true, data: res };
+      const data = await getAppointments();
+      setAppointments(data);
     } catch (err) {
-      console.error(err);
-      setError(err.message || "Error al agendar cita");
-      return { ok: false, error: err.message };
+      console.error("Error cargando citas", err);
+      setError(err.message || "Error al cargar citas");
     } finally {
       setLoading(false);
     }
   };
 
-  return { createAppointment, loading, error };
+  // Cargar automáticamente al montar el componente
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  return { appointments, loading, error, reload: loadAppointments };
 }

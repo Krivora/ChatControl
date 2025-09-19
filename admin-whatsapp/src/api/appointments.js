@@ -1,7 +1,9 @@
 import { api } from "./client";
 
-export function getAppointments() {
-  return api.get("/appointments"); // backend devuelve todas las citas con fecha, hora_inicio, hora_fin
+export async function getAppointments() {
+  const res = await api.get("/appointments");
+  // 👇 Aquí está el cambio clave
+  return Array.isArray(res.data) ? res.data : [];
 }
 
 export function createAppointment({ conversationId, date, timeStart, timeEnd }) {
