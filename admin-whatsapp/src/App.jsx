@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Messages from "./pages/MessagesPage";
 import AppointmentsPage from "./pages/AppointmentPage";
 import ConfigurationPage from "./pages/ConfigurationPage";
+import UsersPage from "./pages/UsersPage";
 
 import PrivateRoute from "./routes/PrivateRoute";
 import Layout from "./components/Layout";
@@ -41,7 +42,7 @@ function App() {
           <Route path="/messages" element={<Messages darkMode={darkMode}toggleDarkMode={toggleDarkMode}/>} />
           <Route path="/appointments" element={<AppointmentsPage darkMode={darkMode}toggleDarkMode={toggleDarkMode}/>} />
           <Route path="/configuration" element={<ConfigurationPage darkMode={darkMode}toggleDarkMode={toggleDarkMode}/>} />
-
+          <Route path="/users" element={<UsersPage darkMode={darkMode}toggleDarkMode={toggleDarkMode}/>} />
         </Route>
       </Route>
 
