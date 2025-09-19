@@ -1,6 +1,6 @@
 // src/hooks/useConversations.js
 import { useEffect, useState } from "react";
-import { getConversations } from "../api/conversations";
+import { getConversations} from "../api";
 
 export function useConversations() {
   const [conversations, setConversations] = useState([]);

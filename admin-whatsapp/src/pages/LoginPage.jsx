@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import logoLight from "../assets/logo.png";
 import logoDark from "../assets/logo.png";
-import { login } from "../api/auth"; // 👈 importa tu función
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth"; // 👈 usamos el hook centralizado
 
-export default function Login({ darkMode, onLogin }) {
-  const [email, setEmail] = useState("");     // 👈 email en lugar de username
+export default function Login({ darkMode }) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { loginUser } = useAuth(); // 👈 login del hook
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,13 +18,7 @@ export default function Login({ darkMode, onLogin }) {
     setLoading(true);
 
     try {
-      const { user, token } = await login(email, password);
-
-      // Guardamos en localStorage
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      if (onLogin) onLogin(user);
+      await loginUser(email, password); // 👈 ya hace login + guarda user/token
       navigate("/");
     } catch (err) {
       setError(err.message);

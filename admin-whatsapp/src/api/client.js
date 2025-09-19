@@ -1,11 +1,13 @@
-// src/api/client.js
-const BASE = import.meta?.env?.VITE_API_BASE_URL || "/api";
+const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 async function request(path, { method = "GET", body, headers = {} } = {}) {
+  const token = localStorage.getItem("token");
+
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -18,7 +20,18 @@ async function request(path, { method = "GET", body, headers = {} } = {}) {
     // puede no traer body
   }
 
+  // ⚡ Manejo de errores
   if (!res.ok) {
+    // Si el token es inválido o expiró
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      // Redirige al login solo si no estás ya ahí
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
     const msg = data?.message || `Error ${res.status}`;
     throw new Error(msg);
   }
