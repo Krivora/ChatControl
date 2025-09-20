@@ -1,98 +1,86 @@
-import React, { useState, useEffect } from "react";
-import UserForm from "../components/users/UsersForm.jsx";
-import UserList from "../components/users/UsersList.jsx";
+import { useUsers } from "../hooks/useUsers";
+import { useEffect, useState } from "react";
+import UsersTable from "../components/users/userTable";
+import UserFormDialog from "../components/users/userFormDialog";
+import Swal from "sweetalert2";
 
-export default function UsersPage({ darkMode }) {
-  const [users, setUsers] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+export default function UsersPage() {
+  const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users`, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        }
-      });
-
-      if (!res.ok) {
-        console.error("Error al obtener usuarios:", res.statusText);
-        return;
-      }
-
-      const data = await res.json();
-      console.log("Respuesta API completa:", data);
-
-      // Solo usamos el array de usuarios que está dentro de data.data
-      const usersArray = Array.isArray(data.data) ? data.data : [];
-      console.log("Usuarios válidos:", usersArray);
-
-      setUsers(usersArray);
-    } catch (err) {
-      console.error("Error al hacer fetch de usuarios:", err);
-    }
-  };
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editUser, setEditUser] = useState(null);
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  const handleCreate = () => {
+    setEditUser(null);
+    setOpenDialog(true);
+  };
+
   const handleEdit = (user) => {
-    setEditingUser(user);
-    setShowModal(true);
+    setEditUser(user);
+    setOpenDialog(true);
   };
 
-  const handleAdd = () => {
-    setEditingUser(null);
-    setShowModal(true);
-  };
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: "¿Eliminar usuario?",
+      text: "Esta acción no se puede deshacer",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    });
 
-  const handleSave = async (form) => {
-    try {
-      const url = form.id
-        ? `${import.meta.env.VITE_API_BASE_URL}/users/${form.id}`
-        : `${import.meta.env.VITE_API_BASE_URL}/users`;
-      const method = form.id ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        return alert(data.message || "Error al guardar usuario");
-      }
-
-      setShowModal(false);
-      fetchUsers();
-    } catch (err) {
-      console.error("Error creando/actualizando usuario:", err);
-      alert("Error creando/actualizando usuario");
+    if (result.isConfirmed) {
+      await deleteUser(id);
+      Swal.fire("Eliminado", "Usuario eliminado.", "success");
     }
   };
 
+  const handleSubmit = async (data) => {
+    if (editUser) {
+      await updateUser(editUser.id, data);
+      Swal.fire("Actualizado", "Usuario modificado exitosamente.", "success");
+    } else {
+      await createUser(data);
+      Swal.fire("Guardado", "Usuario creado exitosamente.", "success");
+    }
+    setOpenDialog(false);
+  };
+
   return (
-    <div style={{ padding: 20, backgroundColor: darkMode ? "#222" : "#f4f4f4", minHeight: "100vh" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-        <h2 style={{ color: darkMode ? "#fff" : "#222" }}>Usuarios</h2>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-semibold">Usuarios</h1>
         <button
-          onClick={handleAdd}
-          style={{ padding: "8px 15px", borderRadius: 6, border: "none", backgroundColor: "#960b2b", color: "#fff", cursor: "pointer" }}
+          onClick={handleCreate}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
         >
-          + Agregar Usuario
+          + Nuevo Usuario
         </button>
       </div>
 
-      <UserList users={users} darkMode={darkMode} onEdit={handleEdit} />
+      <UsersTable
+        users={users}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
-      {showModal && (
-        <UserForm darkMode={darkMode} user={editingUser} onClose={() => setShowModal(false)} onSave={handleSave} />
-      )}
+      {/* Modal para crear/editar */}
+      <UserFormDialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        onSubmit={handleSubmit}
+        initialData={editUser}
+        isEdit={!!editUser}
+      />
+
     </div>
   );
 }

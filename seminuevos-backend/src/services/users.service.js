@@ -6,6 +6,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { signToken } from '../utils/jwt.js';
 
 export const UsersService = {
+
   async register(req) {
     const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
     const existing = await UsersRepo.getByEmail(email);
@@ -58,21 +59,6 @@ export const UsersService = {
     };
   },
 
-  async updateDarkMode(req) {
-    const userId = req.user.id; // viene del token (requireAuth)
-    const { darkMode } = req.body;
-
-    if (typeof darkMode !== 'boolean') {
-      throw new ApiError(400, 'darkMode debe ser booleano');
-    }
-
-    const updatedUser = await UsersRepo.updateDarkMode(userId, darkMode);
-    return {
-      id: updatedUser.id,
-      darkMode: updatedUser.dark_mode
-    };
-  },
-   
   async update(req) {
     const { id } = req.params;
     const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
@@ -89,6 +75,29 @@ export const UsersService = {
     const passwordHash = password ? await bcrypt.hash(password, 10) : user.password;
 
     return UsersRepo.update(id, { nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash });
+  },
+
+  async updateDarkMode(req) {
+    const userId = req.user.id; // viene del token (requireAuth)
+    const { darkMode } = req.body;
+
+    if (typeof darkMode !== 'boolean') {
+      throw new ApiError(400, 'darkMode debe ser booleano');
+    }
+
+    const updatedUser = await UsersRepo.updateDarkMode(userId, darkMode);
+    return {
+      id: updatedUser.id,
+      darkMode: updatedUser.dark_mode
+    };
+  },
+   
+  async softDelete(req) {
+    const { id } = req.params;
+    const user = await UsersRepo.getById(id);
+    if (!user) throw new ApiError(404, 'Usuario no encontrado');
+
+    return UsersRepo.softDelete(id);
   }
 
 };

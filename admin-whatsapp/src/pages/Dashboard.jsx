@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import WeeklyChart from "../components/dashboard/WeeklyChart";
 
-export default function Dashboard({ darkMode }) {
+export default function Dashboard() {
+  const { darkMode } = useTheme(); // 👈 ahora lo tomas global
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);

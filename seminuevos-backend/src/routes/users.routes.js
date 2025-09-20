@@ -4,6 +4,7 @@ import { register, listUsers, getUser, login } from '../controllers/users.contro
 import { validate } from '../middlewares/validate.js';
 import { registerUserSchema, loginUserSchema } from '../validators/users.validators.js';
 import { requireAuth } from '../middlewares/auth.js';
+import { deleteUser } from '../controllers/users.controller.js';
 import { updateDarkMode } from '../controllers/users.controller.js';
 import { createUser, updateUser } from '../controllers/users.controller.js';
 
@@ -11,7 +12,6 @@ const r = Router();
 
 // Registro con validación
 r.post('/register', validate(registerUserSchema), register);
-
 // Login con validación
 r.post('/login', validate(loginUserSchema), login);
 
@@ -19,9 +19,10 @@ r.post('/login', validate(loginUserSchema), login);
 r.get('/', requireAuth, listUsers);
 r.get('/:id', requireAuth, getUser);
 
-r.patch('/dark-mode', requireAuth, updateDarkMode);
 
 r.post('/', requireAuth, createUser);     
 r.put('/:id', requireAuth, updateUser);     
 
+r.delete('/:id', requireAuth, deleteUser);
+r.patch('/dark-mode', requireAuth, updateDarkMode);
 export default r;

@@ -2,6 +2,7 @@
 import { pool } from '../config/db.js';
 
 export const UsersRepo = {
+
   async list({ limit, offset }) {
     const { rows } = await pool.query(`
       SELECT
@@ -9,15 +10,11 @@ export const UsersRepo = {
         fecha_nacimiento, genero, dark_mode,
         created_at, updated_at
       FROM users
+      WHERE deleted_at IS NULL
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2
     `, [limit, offset]);
     return rows;
-  },
-
-  async count() {
-    const { rows } = await pool.query(`SELECT COUNT(*)::int AS total FROM users`);
-    return rows[0].total;
   },
 
   async getById(id) {
@@ -27,13 +24,13 @@ export const UsersRepo = {
         fecha_nacimiento, genero, dark_mode,
         created_at, updated_at
       FROM users
-      WHERE id = $1
+      WHERE id = $1 AND deleted_at IS NULL
     `, [id]);
     return rows[0] || null;
   },
 
   async getByEmail(email) {
-    const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+    const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL`, [email]);
     return rows[0] || null;
   },
 
@@ -43,17 +40,6 @@ export const UsersRepo = {
       VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, dark_mode, created_at
     `, [nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash]);
-    return rows[0];
-  },
-
-  async updateDarkMode(userId, darkMode) {
-    const { rows } = await pool.query(
-      `UPDATE users 
-       SET dark_mode = $1, updated_at = NOW()
-       WHERE id = $2
-       RETURNING id, dark_mode`,
-      [darkMode, userId]
-    );
     return rows[0];
   },
 
@@ -68,6 +54,26 @@ export const UsersRepo = {
     `, [nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash, id]);
 
     return rows[0];
-  }
+  },
 
+  async softDelete(id) {
+    const { rows } = await pool.query(`
+      UPDATE users
+      SET deleted_at = NOW(), updated_at = NOW()
+      WHERE id = $1
+      RETURNING id
+    `, [id]);
+    return rows[0];
+  },
+
+  async updateDarkMode(userId, darkMode) {
+    const { rows } = await pool.query(
+      `UPDATE users 
+       SET dark_mode = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, dark_mode`,
+      [darkMode, userId]
+    );
+    return rows[0];
+  },
 };

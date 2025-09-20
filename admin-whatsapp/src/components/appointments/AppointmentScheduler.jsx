@@ -5,11 +5,13 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useState, useRef, useMemo } from "react";
 import { useAppointments } from "../../hooks/useAppointment";
 import { createAppointment } from "../../api";
+import { useTheme } from "../../context/ThemeContext"; 
 
-export default function AppointmentScheduler({ darkMode }) {
+export default function AppointmentScheduler() {
   const [activeView, setActiveView] = useState("timeGridDay");
   const calendarRef = useRef(null);
   const { appointments, loading, error, reload } = useAppointments();
+  const { darkMode } = useTheme();
 
   const events = useMemo(
     () =>

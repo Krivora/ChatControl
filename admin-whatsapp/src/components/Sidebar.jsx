@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { useTheme } from "../context/ThemeContext";
+
 import { FaBars, FaHome, FaCog, FaEnvelope, FaRegUserCircle,FaCalendar } from "react-icons/fa";
 
-export default function Sidebar({ darkMode, isOpen, setIsOpen }) {
+export default function Sidebar({ isOpen, setIsOpen }) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const { darkMode } = useTheme();
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -18,8 +21,9 @@ export default function Sidebar({ darkMode, isOpen, setIsOpen }) {
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
+       { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
     { id: "configuration", label: "configuration", icon: <FaCog />, path: "/configuration" },
-    { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
+ 
   ];
 
   return (
