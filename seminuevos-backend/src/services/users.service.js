@@ -71,5 +71,24 @@ export const UsersService = {
       id: updatedUser.id,
       darkMode: updatedUser.dark_mode
     };
+  },
+   
+  async update(req) {
+    const { id } = req.params;
+    const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
+
+    const user = await UsersRepo.getById(id);
+    if (!user) throw new ApiError(404, 'Usuario no encontrado');
+
+    // Verificar si cambió el email y si ya existe
+    if (email && email !== user.email) {
+      const existing = await UsersRepo.getByEmail(email);
+      if (existing) throw new ApiError(400, 'El email ya está registrado');
+    }
+
+    const passwordHash = password ? await bcrypt.hash(password, 10) : user.password;
+
+    return UsersRepo.update(id, { nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash });
   }
+
 };

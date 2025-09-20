@@ -27,3 +27,13 @@ export const updateDarkMode = asyncHandler(async (req, res) => {
   const updated = await UsersService.updateDarkMode(req);
   return ok(res, updated);
 });
+
+export const createUser = asyncHandler(async (req, res) => {
+  const user = await UsersService.register(req); // Puedes reutilizar register
+  return ok(res, user);
+});
+
+export const updateUser = asyncHandler(async (req, res) => {
+  const user = await UsersService.update(req);
+  return ok(res, user);
+});

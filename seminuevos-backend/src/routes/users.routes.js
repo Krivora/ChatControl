@@ -5,6 +5,7 @@ import { validate } from '../middlewares/validate.js';
 import { registerUserSchema, loginUserSchema } from '../validators/users.validators.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { updateDarkMode } from '../controllers/users.controller.js';
+import { createUser, updateUser } from '../controllers/users.controller.js';
 
 const r = Router();
 
@@ -19,5 +20,8 @@ r.get('/', requireAuth, listUsers);
 r.get('/:id', requireAuth, getUser);
 
 r.patch('/dark-mode', requireAuth, updateDarkMode);
+
+r.post('/', requireAuth, createUser);     
+r.put('/:id', requireAuth, updateUser);     
 
 export default r;
