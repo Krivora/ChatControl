@@ -20,7 +20,6 @@ export const UsersService = {
     const { limit, offset, page, pageSize } = parsePagination(req);
     const [items, total] = await Promise.all([
       UsersRepo.list({ limit, offset }),
-      UsersRepo.count()
     ]);
     return { items, meta: { page, pageSize, total } };
   },

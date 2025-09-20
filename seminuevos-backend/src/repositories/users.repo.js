@@ -17,6 +17,8 @@ export const UsersRepo = {
     return rows;
   },
 
+  
+
   async getById(id) {
     const { rows } = await pool.query(`
       SELECT
