@@ -2,12 +2,15 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import "./index.css"; // asegúrate de tener Tailwind o tus estilos globales
+import { ThemeProvider } from "./context/ThemeContext"; // 👈 tu contexto global
+import "./index.css"; // estilos globales (Tailwind, etc.)
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

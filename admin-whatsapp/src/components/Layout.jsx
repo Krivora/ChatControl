@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
+import ThemeToggle from "./ThemeToggle";
+import { useTheme } from "../context/ThemeContext"; 
 
-export default function Layout({ darkMode, toggleDarkMode, user, onLogout }) {
+export default function Layout({ user, onLogout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  const { darkMode } = useTheme(); // 👈 se obtiene del contexto global
 
   // Cerrar menú si se hace click fuera
   useEffect(() => {
@@ -25,12 +28,8 @@ export default function Layout({ darkMode, toggleDarkMode, user, onLogout }) {
         darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"
       }`}
     >
-      <Sidebar
-        darkMode={darkMode}
-        toggleDarkMode={toggleDarkMode}
-        isOpen={isSidebarOpen}
-        setIsOpen={setIsSidebarOpen}
-      />
+      {/* Sidebar ahora no necesita darkMode ni toggleDarkMode como props */}
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       {/* Main content */}
       <main className="flex flex-col flex-1">
@@ -41,19 +40,13 @@ export default function Layout({ darkMode, toggleDarkMode, user, onLogout }) {
           }`}
         >
           {/* Botón tema */}
-          <button
-            onClick={toggleDarkMode}
-            aria-label="Toggle theme"
-            className={`mr-4 text-lg ${darkMode ? "text-white" : "text-gray-800"}`}
-          >
-            {darkMode ? "☀️" : "🌙"}
-          </button>
+          <ThemeToggle />
 
           {/* Usuario */}
           {user && (
             <div
               ref={dropdownRef}
-              className="relative cursor-pointer"
+              className="relative cursor-pointer ml-4"
               onClick={() => setMenuOpen(!menuOpen)}
             >
               <span className="font-medium">{user.nombre || user.email} ⬇️</span>

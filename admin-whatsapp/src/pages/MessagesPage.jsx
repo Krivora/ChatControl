@@ -6,10 +6,12 @@ import CustomerInfo from "../components/messages/CustomerInfo";
 
 import { useConversations } from "../hooks/useConversations";
 import { useConversationDetail } from "../hooks/useConversationDetail";
+import { useTheme } from "../context/ThemeContext";
 
-export default function MessagesPage({ darkMode }) {
+export default function MessagesPage() {
   const { conversations, selectedId, selectConversation } = useConversations();
   const { chat, loading } = useConversationDetail(selectedId);
+  const { darkMode } = useTheme();
 
   // estado para controlar qué se muestra en móvil
   const [mobileView, setMobileView] = useState("list"); 

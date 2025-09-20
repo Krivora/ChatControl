@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "../context/ThemeContext"; // 👈 importar
 import {
   LineChart,
   Line,
@@ -10,7 +11,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function Dashboard({ darkMode }) {
+export default function Dashboard() {
+  const { darkMode } = useTheme(); // 👈 ahora lo tomas global
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -54,24 +56,16 @@ export default function Dashboard({ darkMode }) {
       }`}
     >
       {/* Primera fila */}
-      <div
-        className={`flex ${
-          isMobile ? "flex-col" : "flex-row"
-        } gap-5 mb-5 w-full`}
-      >
+      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5 w-full`}>
         {cuadros.slice(0, 4).map((c) => (
           <div
             key={c.id}
-            className={`${baseCard} flex-1 ${
-              darkMode ? "bg-[#2a2a2a]" : "bg-white"
-            }`}
+            className={`${baseCard} flex-1 ${darkMode ? "bg-[#2a2a2a]" : "bg-white"}`}
           >
             {c.label === "Total de mensajes" ? (
               <>
                 <div className="text-3xl font-bold mb-2">{totalMensajes}</div>
-                <div className="text-lg font-medium text-center">
-                  Total de mensajes
-                </div>
+                <div className="text-lg font-medium text-center">Total de mensajes</div>
                 <div className="text-xs mt-1 text-center opacity-80">
                   Periodo: 07-02-2025 a 13-02-2025
                 </div>
@@ -84,32 +78,19 @@ export default function Dashboard({ darkMode }) {
       </div>
 
       {/* Segunda fila */}
-      <div
-        className={`flex ${
-          isMobile ? "flex-col" : "flex-row"
-        } gap-5 mb-5 w-full`}
-      >
+      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5 w-full`}>
         {cuadros.slice(4, 6).map((c) => (
           <div
             key={c.id}
-            className={`${baseCard} ${
-              darkMode ? "bg-[#2a2a2a]" : "bg-white"
-            } ${isMobile ? "min-h-[250px]" : "min-h-[400px]"} flex-1`}
+            className={`${baseCard} ${darkMode ? "bg-[#2a2a2a]" : "bg-white"} ${
+              isMobile ? "min-h-[250px]" : "min-h-[400px]"
+            } flex-1`}
           >
             {c.label === "Gráfica semanal" ? (
-              <ResponsiveContainer
-                width="100%"
-                height={isMobile ? 250 : "100%"}
-              >
+              <ResponsiveContainer width="100%" height={isMobile ? 250 : "100%"}>
                 <LineChart data={data}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={darkMode ? "#444" : "#ccc"}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke={darkMode ? "#fff" : "#000"}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#444" : "#ccc"} />
+                  <XAxis dataKey="name" stroke={darkMode ? "#fff" : "#000"} />
                   <YAxis stroke={darkMode ? "#fff" : "#000"} />
                   <Tooltip
                     contentStyle={{
@@ -128,30 +109,18 @@ export default function Dashboard({ darkMode }) {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div
-                className={`font-semibold ${
-                  isMobile ? "text-base" : "text-lg"
-                }`}
-              >
-                {c.label}
-              </div>
+              <div className={`font-semibold ${isMobile ? "text-base" : "text-lg"}`}>{c.label}</div>
             )}
           </div>
         ))}
       </div>
 
       {/* Tercera fila */}
-      <div
-        className={`flex ${
-          isMobile ? "flex-col" : "flex-row"
-        } gap-5 w-full`}
-      >
+      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 w-full`}>
         {cuadros.slice(6, 10).map((c) => (
           <div
             key={c.id}
-            className={`${baseCard} flex-1 ${
-              darkMode ? "bg-[#2a2a2a]" : "bg-white"
-            } text-lg font-semibold min-h-[150px]`}
+            className={`${baseCard} flex-1 ${darkMode ? "bg-[#2a2a2a]" : "bg-white"} text-lg font-semibold min-h-[150px]`}
           >
             {c.label}
           </div>
