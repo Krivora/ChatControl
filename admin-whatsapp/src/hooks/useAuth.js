@@ -3,24 +3,33 @@ import { login } from "../api";
 import { useTheme } from "../context/ThemeContext";
 
 export function useAuth() {
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user") || "null")
-  );
-  const { setDarkMode } = useTheme(); // 👈 para aplicar el tema desde el backend
+  let initialUser = null;
+  try {
+    const raw = localStorage.getItem("user");
+    if (raw) {
+      initialUser = JSON.parse(raw);
+    }
+  } catch (e) {
+    console.error("Error parsing user from localStorage:", e);
+    localStorage.removeItem("user"); // limpiar dato corrupto
+  }
+
+  const [user, setUser] = useState(initialUser);
+  const { setDarkMode } = useTheme();
 
   const loginUser = async (email, password) => {
     const res = await login(email, password);
 
-    // el backend devuelve: { user, token }
-    const { user: loggedUser, token } = res;
+    // 👇 Desestructuramos desde res.data
+    const { user: loggedUser, token } = res.data;
 
-    // guardar en localStorage
+    // Guardar en localStorage
     localStorage.setItem("user", JSON.stringify(loggedUser));
     localStorage.setItem("token", token);
 
-    // actualizar estado global
+    // Actualizar estado global
     setUser(loggedUser);
-    setDarkMode(loggedUser.darkMode); // 👈 aplicar el darkMode correcto
+    setDarkMode(loggedUser.darkMode);
 
     return loggedUser;
   };
@@ -29,8 +38,10 @@ export function useAuth() {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     setUser(null);
-    setDarkMode(false); // 👈 opcional: vuelve al modo claro al salir
+    setDarkMode(false);
   };
 
-  return { user, loginUser, logoutUser };
+  const isAuthenticated = !!user;
+
+  return { user, loginUser, logoutUser, isAuthenticated };
 }
