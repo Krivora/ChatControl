@@ -3,10 +3,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/dashboard/StatCard";
 import WeeklyChart from "../components/dashboard/WeeklyChart";
-import TopProfiles from "../components/dashboard/TopProfiles";
 import { useTheme } from "../context/ThemeContext";
 import { UsersApi } from "../api/users";
-import { getAppointments } from "../api/appointments"; 
+import { getAppointments } from "../api/appointments";
 
 export default function Dashboard() {
   const { darkMode } = useTheme();
@@ -24,6 +23,8 @@ export default function Dashboard() {
   const [appointments, setAppointments] = useState([]);
   const [todayAppointments, setTodayAppointments] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [users, setUsers] = useState([]);
+
   // ---- Resize ----
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -93,14 +94,16 @@ export default function Dashboard() {
     setTotalClientesSemana(clientesSemana.length);
   }, [weekRange, customers]);
 
-  // ---- Total conversaciones finalizadas y TopProfiles ----
+  // ---- Conversaciones + Mejores Perfilamientos ----
   useEffect(() => {
-    if (conversations.length === 0) return;
+    if (!conversations.length) return;
 
     const finalizadas = conversations.filter(c => c.status === "finish");
     setTotalConversaciones(finalizadas.length);
 
-    // TopProfiles
+    const activas = conversations.filter(c => c.status === "active");
+    setTotalConversacionesActivas(activas.length);
+
     const ponderacionMap = {
       down_payment_max: [
         { label: "$30,000 – $50,000", points: 15 },
@@ -129,12 +132,15 @@ export default function Dashboard() {
       ],
     };
 
-    const normalize = (str) => !str ? "" : str.toLowerCase().replace(/\s/g,"").replace(/,/g,"").replace(/\$/g,"").replace(/–|-/g,"-");
+    const normalize = str =>
+      !str ? "" : String(str).toLowerCase().replace(/\s/g, "").replace(/,/g, "").replace(/\$/g, "").replace(/–|-/g, "-");
 
     const calculatePoints = (answers = []) =>
       answers.reduce((sum, a) => {
-        const options = ponderacionMap[a.question_key] || [];
-        const matchedOption = options.find(opt => normalize(opt.label) === normalize(a.answer_value));
+        const key = a.question_key ?? a.question?.key ?? "";
+        const answerValue = a.answer_value ?? a.value ?? a.answer ?? "";
+        const options = ponderacionMap[key] || [];
+        const matchedOption = options.find(opt => normalize(opt.label) === normalize(answerValue));
         return sum + (matchedOption?.points || 0);
       }, 0);
 
@@ -144,48 +150,39 @@ export default function Dashboard() {
       { min: 101, max: 140, color: "bg-green-400", label: "Bien" },
       { min: 141, max: 170, color: "bg-sky-300", label: "Excelente" },
     ];
-
-    const getRange = (totalPoints) => scoreRanges.find(r => totalPoints >= r.min && totalPoints <= r.max) || {};
+    const getRange = totalPoints => scoreRanges.find(r => totalPoints >= r.min && totalPoints <= r.max) || { label: "Malo", color: "bg-red-500" };
 
     const profiles = conversations.map(conv => {
-      const totalPoints = calculatePoints(conv.answers || []);
-      const range = getRange(totalPoints);
+      const points = calculatePoints(conv.answers || []);
+      const range = getRange(points);
       return {
         id: conv.id,
-        name: conv.customer_name,
-        points: totalPoints,
+        name: conv.customer_name || conv.customer?.full_name || "Sin nombre",
+        points,
         label: range.label,
         color: range.color,
       };
     });
 
+    console.log("profiles calculados:", profiles.slice(0, 20));
     setTopProfiles(profiles);
   }, [conversations]);
 
-  // ---- Conversaciones activas ----
-  useEffect(() => {
-    if (conversations.length === 0) return;
-    const activas = conversations.filter(c => c.status === "active");
-    setTotalConversacionesActivas(activas.length);
-  }, [conversations]);
-
-  // ---- WeeklyMessages (conteo de mensajes por día) ----
+  // ---- WeeklyMessages ----
   useEffect(() => {
     if (!weekRange.start || !weekRange.end || customers.length === 0) return;
 
     const startDate = new Date(weekRange.start.split("-").reverse().join("-"));
     const endDate = new Date(weekRange.end.split("-").reverse().join("-"));
 
-    // Nombres de días
     const days = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
     const counts = Array(7).fill(0);
 
-    // Contar cada last_interaction dentro del rango
     customers.forEach(c => {
       if(!c.last_interaction) return;
       const msgDate = new Date(c.last_interaction);
       if(msgDate >= startDate && msgDate <= endDate){
-        const dayIdx = (msgDate.getDay() + 6) % 7; // lunes=0
+        const dayIdx = (msgDate.getDay() + 6) % 7;
         counts[dayIdx] += 1;
       }
     });
@@ -194,9 +191,7 @@ export default function Dashboard() {
     setWeeklyMessages(chartData);
   }, [customers, weekRange]);
 
-  //users
-  const [users, setUsers] = useState([]);
-
+  // ---- Fetch users ----
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -209,6 +204,7 @@ export default function Dashboard() {
     fetchUsers();
   }, []);
 
+  // ---- Fetch appointments ----
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
@@ -221,73 +217,36 @@ export default function Dashboard() {
     fetchAppointments();
   }, []);
 
+    // ---- Procesar citas ----
   useEffect(() => {
     if (!appointments.length || !customers.length) return;
-
     const today = new Date();
-    const todayYear = today.getFullYear();
-    const todayMonth = today.getMonth();
-    const todayDate = today.getDate();
 
-    const formatAppointment = (appt) => {
-      const customer = customers.find(c => c.id === appt.customer_id);
+    const formatAppointment = appt => {
+      const customer = customers.find(c=>c.id===appt.customer_id);
       return `${customer?.full_name || "Sin nombre"}\n${new Date(appt.date).toISOString().split("T")[0]} ${appt.time_start}`;
     };
 
+    const sortAppointments = arr => arr.sort((a,b)=>{
+      const [h1,m1,s1]=a.time_start.split(":").map(Number);
+      const [h2,m2,s2]=b.time_start.split(":").map(Number);
+      const dA = new Date(a.date); dA.setHours(h1,m1,s1,0);
+      const dB = new Date(b.date); dB.setHours(h2,m2,s2,0);
+      return dA-dB;
+    });
 
-    // Citas de hoy
-    const todayAppointmentsFiltered = appointments
-      .filter(appt => {
-        if (appt.status.toLowerCase() !== "confirmed") return false;
+    setTodayAppointments(sortAppointments(appointments.filter(a=>{
+      if(a.status.toLowerCase()!=="confirmed") return false;
+      const d = new Date(a.date);
+      return d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
+    })).map(formatAppointment));
 
-        const apptDate = new Date(appt.date);
-        return (
-          apptDate.getFullYear() === todayYear &&
-          apptDate.getMonth() === todayMonth &&
-          apptDate.getDate() === todayDate
-        );
-      })
-      .sort((a, b) => {
-        const [h1, m1, s1] = a.time_start.split(":").map(Number);
-        const [h2, m2, s2] = b.time_start.split(":").map(Number);
+    setUpcomingAppointments(sortAppointments(appointments.filter(a=>{
+      if(a.status.toLowerCase()!=="confirmed") return false;
+      const d = new Date(a.date);
+      return !(d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate());
+    })).map(formatAppointment));
 
-        const dA = new Date(a.date);
-        dA.setHours(h1, m1, s1, 0);
-
-        const dB = new Date(b.date);
-        dB.setHours(h2, m2, s2, 0);
-
-        return dA - dB;
-      });
-
-    setTodayAppointments(todayAppointmentsFiltered.map(formatAppointment));
-
-    // Próximas citas (excluyendo hoy)
-    const upcomingAppointmentsFiltered = appointments
-      .filter(appt => {
-        if (appt.status.toLowerCase() !== "confirmed") return false;
-
-        const apptDate = new Date(appt.date);
-        return (
-          apptDate.getFullYear() !== todayYear ||
-          apptDate.getMonth() !== todayMonth ||
-          apptDate.getDate() !== todayDate
-        );
-      })
-      .sort((a, b) => {
-        const [h1, m1, s1] = a.time_start.split(":").map(Number);
-        const [h2, m2, s2] = b.time_start.split(":").map(Number);
-
-        const dA = new Date(a.date);
-        dA.setHours(h1, m1, s1, 0);
-
-        const dB = new Date(b.date);
-        dB.setHours(h2, m2, s2, 0);
-
-        return dA - dB;
-      });
-
-    setUpcomingAppointments(upcomingAppointmentsFiltered.map(formatAppointment));
   }, [appointments, customers]);
 
   return (
@@ -298,52 +257,51 @@ export default function Dashboard() {
             Periodo: {weekRange.start} a {weekRange.end}
           </div>
         </StatCard>
-
         <StatCard title="Conversaciones Completadas" value={totalConversaciones} darkMode={darkMode} />
         <StatCard title="Conversaciones Pendientes" value={totalConversacionesActivas} darkMode={darkMode} />
         <StatCard title="Créditos ingresados" darkMode={darkMode} />
       </div>
 
-        <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5`}>
-        <div className="flex-1 flex flex-col" >
-            <StatCard title="Mejores Perfilamientos" darkMode={darkMode} className="flex-1 flex flex-col">
-              {topProfiles.length === 0 ? (
-                <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
-                  No hay perfilamientos
-                </div>
-              ) : (
-                <div
-                  className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}
-                >
-                  {topProfiles
-                    .filter(p => p.label === "Bien" || p.label === "Excelente")
-                    .sort((a, b) => b.points - a.points)
-                    .map((p, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => navigate("/messages", { state: { conversationId: p.id } })}
-                        className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                          darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
-                        }`}
-                      >
-                        <span className="font-medium truncate">{p.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-white text-xs font-semibold ${p.color}`}>
-                            {p.points} pts
-                          </span>
-                          <span className="text-xs opacity-70">{p.label}</span>
-                        </div>
+      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5`}>
+        <div className="flex-1 flex flex-col">
+          <StatCard title="Mejores Perfilamientos" darkMode={darkMode} className="flex-1 flex flex-col">
+            {topProfiles.length === 0 ? (
+              <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
+                No hay perfilamientos
+              </div>
+            ) : (
+              <div
+                className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}
+              >
+                {topProfiles
+                  .filter(p => p.label === "Bien" || p.label === "Excelente")
+                  .sort((a, b) => b.points - a.points)
+                  .map((p, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => navigate("/messages", { state: { conversationId: p.id } })}
+                      className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
+                        darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <span className="font-medium truncate">{p.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-white text-xs font-semibold ${p.color}`}>
+                          {p.points} pts
+                        </span>
+                        <span className="text-xs opacity-70">{p.label}</span>
                       </div>
-                    ))}
-                </div>
-              )}
-            </StatCard>
-          </div>
-
-          <div className="flex-1">
-            <WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
-          </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </StatCard>
         </div>
+
+        <div className="flex-1">
+          <WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
+        </div>
+      </div>
 
       <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5`}>
         <StatCard title="Colaboradores" darkMode={darkMode} className="flex-1 flex flex-col">
@@ -356,7 +314,7 @@ export default function Dashboard() {
               {users.map((u) => (
                 <div
                   key={u.id}
-                  onClick={() => navigate("/users")} // Aquí se navega a UsersPage
+                  onClick={() => navigate("/users")}
                   className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
                     darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
                   }`}
@@ -369,7 +327,7 @@ export default function Dashboard() {
           )}
         </StatCard>
 
-          <StatCard title="Citas de hoy" darkMode={darkMode} className="flex-1 flex flex-col">
+        <StatCard title="Citas de hoy" darkMode={darkMode} className="flex-1 flex flex-col">
           {todayAppointments.length === 0 ? (
             <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
               No hay citas hoy
