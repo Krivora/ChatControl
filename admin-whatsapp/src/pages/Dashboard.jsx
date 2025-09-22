@@ -5,6 +5,8 @@ import StatCard from "../components/dashboard/StatCard";
 import WeeklyChart from "../components/dashboard/WeeklyChart";
 import TopProfiles from "../components/dashboard/TopProfiles";
 import { useTheme } from "../context/ThemeContext";
+import { UsersApi } from "../api/users";
+import { getAppointments } from "../api/appointments"; 
 
 export default function Dashboard() {
   const { darkMode } = useTheme();
@@ -19,7 +21,9 @@ export default function Dashboard() {
   const [weeklyMessages, setWeeklyMessages] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [conversations, setConversations] = useState([]);
-
+  const [appointments, setAppointments] = useState([]);
+  const [todayAppointments, setTodayAppointments] = useState([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   // ---- Resize ----
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -190,6 +194,101 @@ export default function Dashboard() {
     setWeeklyMessages(chartData);
   }, [customers, weekRange]);
 
+  //users
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await UsersApi.list();
+        setUsers(data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const data = await getAppointments();
+        setAppointments(data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchAppointments();
+  }, []);
+
+  useEffect(() => {
+    if (!appointments.length || !customers.length) return;
+
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth();
+    const todayDate = today.getDate();
+
+    const formatAppointment = (appt) => {
+      const customer = customers.find(c => c.id === appt.customer_id);
+      return `${customer?.full_name || "Sin nombre"}\n${new Date(appt.date).toISOString().split("T")[0]} ${appt.time_start}`;
+    };
+
+
+    // Citas de hoy
+    const todayAppointmentsFiltered = appointments
+      .filter(appt => {
+        if (appt.status.toLowerCase() !== "confirmed") return false;
+
+        const apptDate = new Date(appt.date);
+        return (
+          apptDate.getFullYear() === todayYear &&
+          apptDate.getMonth() === todayMonth &&
+          apptDate.getDate() === todayDate
+        );
+      })
+      .sort((a, b) => {
+        const [h1, m1, s1] = a.time_start.split(":").map(Number);
+        const [h2, m2, s2] = b.time_start.split(":").map(Number);
+
+        const dA = new Date(a.date);
+        dA.setHours(h1, m1, s1, 0);
+
+        const dB = new Date(b.date);
+        dB.setHours(h2, m2, s2, 0);
+
+        return dA - dB;
+      });
+
+    setTodayAppointments(todayAppointmentsFiltered.map(formatAppointment));
+
+    // Próximas citas (excluyendo hoy)
+    const upcomingAppointmentsFiltered = appointments
+      .filter(appt => {
+        if (appt.status.toLowerCase() !== "confirmed") return false;
+
+        const apptDate = new Date(appt.date);
+        return (
+          apptDate.getFullYear() !== todayYear ||
+          apptDate.getMonth() !== todayMonth ||
+          apptDate.getDate() !== todayDate
+        );
+      })
+      .sort((a, b) => {
+        const [h1, m1, s1] = a.time_start.split(":").map(Number);
+        const [h2, m2, s2] = b.time_start.split(":").map(Number);
+
+        const dA = new Date(a.date);
+        dA.setHours(h1, m1, s1, 0);
+
+        const dB = new Date(b.date);
+        dB.setHours(h2, m2, s2, 0);
+
+        return dA - dB;
+      });
+
+    setUpcomingAppointments(upcomingAppointmentsFiltered.map(formatAppointment));
+  }, [appointments, customers]);
 
   return (
     <div className={`min-h-screen p-5 ${darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"}`}>
@@ -242,14 +341,65 @@ export default function Dashboard() {
           </div>
 
           <div className="flex-1">
-<WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
+            <WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
           </div>
         </div>
 
       <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5`}>
-        <StatCard title="Colaboradores" darkMode={darkMode} />
-        <StatCard title="¿¿¿???" darkMode={darkMode} />
-        <StatCard title="Citas Pendientes" darkMode={darkMode} />
+        <StatCard title="Colaboradores" darkMode={darkMode} className="flex-1 flex flex-col">
+          {users.length === 0 ? (
+            <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
+              No hay colaboradores
+            </div>
+          ) : (
+            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}>
+              {users.map((u) => (
+                <div
+                  key={u.id}
+                  onClick={() => navigate("/users")} // Aquí se navega a UsersPage
+                  className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
+                    darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="font-medium truncate">{u.nombre} {u.apellido}</span>
+                  <span className="text-xs opacity-70">{u.email}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </StatCard>
+
+          <StatCard title="Citas de hoy" darkMode={darkMode} className="flex-1 flex flex-col">
+          {todayAppointments.length === 0 ? (
+            <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
+              No hay citas hoy
+            </div>
+          ) : (
+            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}>
+              {todayAppointments.map((appt, i) => (
+                <div key={i} className="flex justify-between items-center px-3 py-2 rounded-md">
+                  {appt}
+                </div>
+              ))}
+            </div>
+          )}
+        </StatCard>
+
+        <StatCard title="Próximas citas" darkMode={darkMode} className="flex-1 flex flex-col">
+          {upcomingAppointments.length === 0 ? (
+            <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
+              No hay próximas citas
+            </div>
+          ) : (
+            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}>
+              {upcomingAppointments.map((appt, i) => (
+                <div key={i} className="flex justify-between items-center px-3 py-2 rounded-md">
+                  {appt}
+                </div>
+              ))}
+            </div>
+          )}
+        </StatCard>
         <StatCard title="Resumen Semanal" darkMode={darkMode} />
       </div>
     </div>
