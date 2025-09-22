@@ -1,14 +1,43 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useWhatsApp } from "../../hooks/useWhatsapp";
+import { UsersApi } from "../../api/users";
 
 export default function ChatWindow({ chat, darkMode }) {
   const [input, setInput] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [usersMessages, setUsersMessages] = useState([]);
   const messagesEndRef = useRef(null);
   const { sendMessage, loading } = useWhatsApp();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
+
+  // Traer usuarios y generar mensajes
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const users = await UsersApi.list();
+        // Filtramos los usuarios que no están eliminados
+        const activeUsers = users.filter(u => !u.deleted_at);
+        // Generamos mensajes usando u dentro del map
+        const msgs = activeUsers.map(u => 
+  `${u.nombre} ${u.apellido}, tu asesor, te contactará desde ${formatPhone(u.telefono)} para asegurarse de que tu experiencia sea rápida, fácil y sin complicaciones.`
+);
+
+        setUsersMessages(msgs);
+      } catch (error) {
+        console.error("Error al traer usuarios:", error);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const formatPhone = (phone) => {
+    if (!phone) return "";
+    const s = phone.toString();
+    return `${s.slice(0,3)} ${s.slice(3,6)} ${s.slice(6,10)}`;
+  };
 
   if (!chat) {
     return (
@@ -41,18 +70,19 @@ export default function ChatWindow({ chat, darkMode }) {
 
   chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (messageToSend) => {
+    if (!messageToSend.trim()) return;
 
-    const to = chat.customer?.whatsapp_id; // ⚡ importante
+    const to = chat.customer?.whatsapp_id; 
     if (!to) {
       alert("Este cliente no tiene número de WhatsApp registrado");
       return;
     }
 
-    const res = await sendMessage(to, input);
+    const res = await sendMessage(to, messageToSend);
     if (res.ok) {
-      setInput(""); // limpiar input
+      setInput(""); 
+      setShowModal(false);
       alert("✅ Mensaje enviado por WhatsApp");
     }
   };
@@ -104,7 +134,7 @@ export default function ChatWindow({ chat, darkMode }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input y botón dinámico */}
       <div
         className={`p-3 flex gap-2 border-t flex-shrink-0 ${
           darkMode
@@ -123,14 +153,53 @@ export default function ChatWindow({ chat, darkMode }) {
             darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
           }`}
         />
-        <button
-          onClick={handleSend}
-          disabled={loading}
-          className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
-        >
-          {loading ? "Enviando..." : "Enviar"}
-        </button>
+
+        {input.trim() ? (
+          <button
+            onClick={() => handleSend(input)}
+            disabled={loading}
+            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
+          >
+            {loading ? "Enviando..." : "Enviar"}
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={loading}
+            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
+          >
+            Asignar
+          </button>
+        )}
       </div>
+
+      {/* Modal de selección */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
+          <div className="bg-white dark:bg-[#2a2a2a] p-6 rounded-lg w-96">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Selecciona un mensaje
+            </h3>
+            <div className="flex flex-col gap-3">
+              {usersMessages.map((msg, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSend(msg)}
+                  className="px-4 py-2 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] text-left"
+                >
+                  {msg}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowModal(false)}
+              className="mt-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
