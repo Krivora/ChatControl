@@ -3,14 +3,21 @@ import { List, CalendarMonth } from "@mui/icons-material";
 import { useState } from "react";
 import CalendarToolbar from "../components/appointments/CalendarToolbar";
 import AppointmentsCalendar from "../components/appointments/AppointmentsCalendar";
+import AppointmentsList from "../components/appointments/AppointmentsList";
+
 export default function AppointmentsPage() {
   const { darkMode } = useTheme();
   const [view, setView] = useState("calendar");
   const [currentDate] = useState(new Date());
 
   return (
-    <div className={darkMode ? "bg-[#1f1f1f] h-[calc(100vh-120px)] p-6" : "bg-white h-[calc(100vh-120px)] p-6"}>
-      
+    <div
+      className={
+        darkMode
+          ? "bg-[#1f1f1f] h-[calc(100vh-120px)] p-6"
+          : "bg-white h-[calc(100vh-120px)] p-6"
+      }
+    >
       {/* Contenedor toggle */}
       <div
         className={`inline-flex w-80 items-center justify-between mb-4 rounded-xl p-1 ${
@@ -21,11 +28,12 @@ export default function AppointmentsPage() {
         <button
           onClick={() => setView("list")}
           className={`flex items-center justify-center gap-2 w-1/2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-            ${view === "list"
-              ? darkMode
-                ? "bg-white text-black shadow"
-                : "bg-white text-black shadow"
-              : darkMode
+            ${
+              view === "list"
+                ? darkMode
+                  ? "bg-white text-black shadow"
+                  : "bg-white text-black shadow"
+                : darkMode
                 ? "text-gray-300 hover:bg-[#3a3a3a]"
                 : "text-gray-600 hover:bg-gray-200"
             }`}
@@ -38,11 +46,12 @@ export default function AppointmentsPage() {
         <button
           onClick={() => setView("calendar")}
           className={`flex items-center justify-center gap-2 w-1/2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-            ${view === "calendar"
-              ? darkMode
-                ? "bg-white text-black shadow"
-                : "bg-white text-black shadow"
-              : darkMode
+            ${
+              view === "calendar"
+                ? darkMode
+                  ? "bg-white text-black shadow"
+                  : "bg-white text-black shadow"
+                : darkMode
                 ? "text-gray-300 hover:bg-[#3a3a3a]"
                 : "text-gray-600 hover:bg-gray-200"
             }`}
@@ -51,8 +60,16 @@ export default function AppointmentsPage() {
           Calendar
         </button>
       </div>
-      <CalendarToolbar currentDate={currentDate} />
-      <AppointmentsCalendar/>
+
+      {/* Toolbar solo para la vista de calendario */}
+      {view === "calendar" && <CalendarToolbar currentDate={currentDate} />}
+
+      {/* Cambiar entre Calendar y List */}
+      {view === "calendar" ? (
+        <AppointmentsCalendar />
+      ) : (
+        <AppointmentsList />
+      )}
     </div>
   );
 }

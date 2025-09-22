@@ -1,4 +1,3 @@
-import React from "react"; // 👈 importante en algunos setups de Vite
 import {
   Dialog,
   DialogTitle,
@@ -7,6 +6,8 @@ import {
   Button,
   TextField,
   MenuItem,
+  Divider,
+  Typography,
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -39,20 +40,26 @@ export default function UserFormDialog({
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: { ...initialData, password: "" },
+    mode: "onChange",
   });
 
   const submitHandler = (data) => {
     if (isEdit && !data.password) {
-      delete data.password; // no sobrescribir si no cambia
+      delete data.password;
     }
     onSubmit(data);
   };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{isEdit ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
-      <form onSubmit={handleSubmit(submitHandler)}>
+      <DialogTitle>
+        {isEdit ? "Editar Usuario" : "Nuevo Usuario"}
+      </DialogTitle>
+      <form onSubmit={handleSubmit(submitHandler)} autoComplete="off">
         <DialogContent dividers className="flex flex-col gap-4">
+          <Typography variant="subtitle2" className="font-semibold text-gray-600">
+            Datos Personales
+          </Typography>
           <TextField
             label="Nombre"
             {...register("nombre")}
@@ -65,13 +72,6 @@ export default function UserFormDialog({
             {...register("apellido")}
             error={!!errors.apellido}
             helperText={errors.apellido?.message}
-            fullWidth
-          />
-          <TextField
-            label="Email"
-            {...register("email")}
-            error={!!errors.email}
-            helperText={errors.email?.message}
             fullWidth
           />
           <TextField
@@ -94,26 +94,27 @@ export default function UserFormDialog({
             <MenuItem value="femenino">Femenino</MenuItem>
             <MenuItem value="no_especifica">No especifica</MenuItem>
           </TextField>
-          {!isEdit && (
-            <TextField
-              type="password"
-              label="Contraseña"
-              {...register("password")}
-              error={!!errors.password}
-              helperText={errors.password?.message}
-              fullWidth
-            />
-          )}
-          {isEdit && (
-            <TextField
-              type="password"
-              label="Nueva Contraseña (opcional)"
-              {...register("password")}
-              error={!!errors.password}
-              helperText={errors.password?.message}
-              fullWidth
-            />
-          )}
+
+          <Divider />
+
+          <Typography variant="subtitle2" className="font-semibold text-gray-600">
+            Credenciales
+          </Typography>
+          <TextField
+            label="Email"
+            {...register("email")}
+            error={!!errors.email}
+            helperText={errors.email?.message}
+            fullWidth
+          />
+          <TextField
+            type="password"
+            label={isEdit ? "Nueva Contraseña (opcional)" : "Contraseña"}
+            {...register("password")}
+            error={!!errors.password}
+            helperText={errors.password?.message}
+            fullWidth
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
