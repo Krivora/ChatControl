@@ -1,13 +1,12 @@
-// src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useTheme } from "../context/ThemeContext";
 import StatCard from "../components/dashboard/StatCard";
 import WeeklyChart from "../components/dashboard/WeeklyChart";
-import { useTheme } from "../context/ThemeContext";
-export default function Dashboard() {
-  const { darkMode } = useTheme(); // 👈 ahora lo tomas global
-  const navigate = useNavigate();
+import StatsRow from "../components/dashboard/StatsRow";
+import TopProfiles from "../components/dashboard/TopProfiles";
 
+export default function Dashboard() {
+  const { darkMode } = useTheme();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [totalClientesSemana, setTotalClientesSemana] = useState(0);
   const [totalConversaciones, setTotalConversaciones] = useState(0);
@@ -36,7 +35,7 @@ export default function Dashboard() {
     setWeekRange({ start: format(monday), end: format(sunday) });
   }, []);
 
-  // ---- Clientes de la semana ----
+  // ---- Fetch de clientes de la semana ----
   useEffect(() => {
     const fetchClientesSemana = async () => {
       try {
@@ -56,29 +55,32 @@ export default function Dashboard() {
 
         setTotalClientesSemana(clientesSemana.length);
       } catch (err) {
-        console.error("Error al obtener clientes de la semana:", err);
+        console.error(err);
       }
     };
 
     if (weekRange.start && weekRange.end) fetchClientesSemana();
   }, [weekRange]);
 
-  // ---- Conversaciones finalizadas ----
+  // ---- Fetch de conversaciones ----
   useEffect(() => {
     const fetchConversaciones = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/conversations?page=1&pageSize=1000`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
-
         const data = await res.json();
         const conversaciones = data.data || [];
-        const finalizadas = conversaciones.filter(c => c.status === "finish");
 
+        // Conversaciones finalizadas
+        const finalizadas = conversaciones.filter(c => c.status === "finish");
         setTotalConversaciones(finalizadas.length);
 
-        // ---- Top perfilamientos ----
-        // Calculamos puntos usando tu lógica
+        // Conversaciones activas
+        const activas = conversaciones.filter(c => c.status === "active");
+        setTotalConversacionesActivas(activas.length);
+
+        // Top perfiles
         const ponderacionMap = {
           down_payment_max: [
             { label: "$30,000 – $50,000", points: 15 },
@@ -145,32 +147,11 @@ export default function Dashboard() {
 
         setTopProfiles(profiles);
       } catch (err) {
-        console.error("Error al obtener conversaciones:", err);
+        console.error(err);
       }
     };
 
     fetchConversaciones();
-  }, []);
-
-  // ---- Conversaciones activas ----
-  useEffect(() => {
-    const fetchConversacionesActivas = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/conversations?page=1&pageSize=1000`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-
-        const data = await res.json();
-        const conversaciones = data.data || [];
-        const activas = conversaciones.filter(c => c.status === "active");
-
-        setTotalConversacionesActivas(activas.length);
-      } catch (err) {
-        console.error("Error al obtener conversaciones activas:", err);
-      }
-    };
-
-    fetchConversacionesActivas();
   }, []);
 
   const data = [
@@ -185,59 +166,30 @@ export default function Dashboard() {
 
   return (
     <div className={`min-h-screen p-5 ${darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"}`}>
-      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5`}>
+      <StatsRow isMobile={isMobile}>
         <StatCard title="Total de clientes esta semana" value={totalClientesSemana} darkMode={darkMode}>
           <div className="text-xs mt-1 text-center opacity-80">
             Periodo: {weekRange.start} a {weekRange.end}
           </div>
         </StatCard>
-
         <StatCard title="Conversaciones Completadas" value={totalConversaciones} darkMode={darkMode} />
         <StatCard title="Conversaciones Pendientes" value={totalConversacionesActivas} darkMode={darkMode} />
-
         <StatCard title="Créditos ingresados" darkMode={darkMode} />
-      </div>
+      </StatsRow>
 
-      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5`}>
+      <StatsRow isMobile={isMobile}>
         <StatCard title="Mejores Perfilamientos" darkMode={darkMode}>
-          {topProfiles.length === 0 ? (
-            <div className="text-sm opacity-70 text-center py-4">No hay perfilamientos</div>
-          ) : (
-            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"}`}>
-              {topProfiles
-                .filter(p => p.label === "Bien" || p.label === "Excelente") // 🔹 solo buenos y excelentes
-                .sort((a, b) => b.points - a.points) // 🔹 ordenar desc por puntos
-                .map((p, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => navigate("/messages", { state: { conversationId: p.id } })}
-                    className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                      darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <span className="font-medium truncate">{p.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-white text-xs font-semibold ${p.color}`}>
-                        {p.points} pts
-                      </span>
-                      <span className="text-xs opacity-70">{p.label}</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
+          <TopProfiles topProfiles={topProfiles} darkMode={darkMode} />
         </StatCard>
-
-
         <WeeklyChart data={data} darkMode={darkMode} />
-      </div>
+      </StatsRow>
 
-      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5`}>
+      <StatsRow isMobile={isMobile}>
         <StatCard title="Colaboradores" darkMode={darkMode} />
         <StatCard title="¿¿¿???" darkMode={darkMode} />
         <StatCard title="Citas Pendientes" darkMode={darkMode} />
         <StatCard title="Resumen Semanal" darkMode={darkMode} />
-      </div>
+      </StatsRow>
     </div>
   );
 }

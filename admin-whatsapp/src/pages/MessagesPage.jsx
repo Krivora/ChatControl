@@ -1,4 +1,3 @@
-// MessagesPage.jsx
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import ConversationList from "../components/messages/ConversationList";
@@ -13,10 +12,9 @@ export default function MessagesPage() {
   const { conversations, selectedId, selectConversation } = useConversations();
   const { chat, loading } = useConversationDetail(selectedId);
   const { darkMode } = useTheme();
+  const location = useLocation(); // 👈 necesario para leer state del navigate
 
-  // estado para controlar qué se muestra en móvil
-  const [mobileView, setMobileView] = useState("list"); 
-  // valores: "list" | "chat" | "info"
+  const [mobileView, setMobileView] = useState("list"); // "list" | "chat" | "info"
 
   // 👈 efecto para seleccionar conversación al llegar desde Dashboard
   useEffect(() => {
@@ -34,11 +32,7 @@ export default function MessagesPage() {
   };
 
   return (
-    <div
-      className={`flex h-[calc(100vh-120px)] overflow-hidden ${
-        darkMode ? "bg-[#121212]" : "bg-gray-100"
-      }`}
-    >
+    <div className={`flex h-[calc(100vh-120px)] overflow-hidden ${darkMode ? "bg-[#121212]" : "bg-gray-100"}`}>
       {/* Desktop / Tablet */}
       <div className="hidden sm:flex flex-1">
         <div className="flex-shrink-0" style={{ width: 300 }}>
@@ -51,9 +45,7 @@ export default function MessagesPage() {
         </div>
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="flex h-full items-center justify-center text-gray-500">
-              Cargando...
-            </div>
+            <div className="flex h-full items-center justify-center text-gray-500">Cargando...</div>
           ) : (
             <ChatWindow chat={chat} darkMode={darkMode} />
           )}
@@ -85,9 +77,7 @@ export default function MessagesPage() {
               </button>
             </div>
             {loading ? (
-              <div className="flex h-full items-center justify-center text-gray-500">
-                Cargando...
-              </div>
+              <div className="flex h-full items-center justify-center text-gray-500">Cargando...</div>
             ) : (
               <ChatWindow chat={chat} darkMode={darkMode} />
             )}
