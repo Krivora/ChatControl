@@ -10,19 +10,23 @@ import { createUser, updateUser } from '../controllers/users.controller.js';
 
 const r = Router();
 
-// Registro con validación
+// Registro público (para que alguien se cree una cuenta)
 r.post('/register', validate(registerUserSchema), register);
-// Login con validación
+
+// Login
 r.post('/login', validate(loginUserSchema), login);
 
-// Listado y detalle requieren auth
+// Listado y detalle (requiere auth)
 r.get('/', requireAuth, listUsers);
 r.get('/:id', requireAuth, getUser);
 
+// Creación interna (solo admin puede crear usuarios)
+r.post('/', requireAuth, validate(registerUserSchema), createUser);
 
-r.post('/', requireAuth, createUser);     
-r.put('/:id', requireAuth, updateUser);     
-
+// Update, delete
+r.put('/:id', requireAuth, updateUser);
 r.delete('/:id', requireAuth, deleteUser);
+
+// Toggle darkMode
 r.patch('/dark-mode', requireAuth, updateDarkMode);
 export default r;

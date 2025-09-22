@@ -1,35 +1,23 @@
 import { api } from "./client";
 
+// UsersApi
 export const UsersApi = {
   list: async (params = {}) => {
-    const { data } = await api.get("/users", { params });
-    return data;
+    return api.get("/users", { params }); // no destructures
   },
-
   get: async (id) => {
-    const { data } = await api.get(`/users/${id}`);
-    return data;
+    return api.get(`/users/${id}`);
   },
-
   create: async (payload) => {
-    const { data } = await api.post("/users", payload);
-    return data;
+    return api.post("/users", payload);
   },
-
   update: async (id, payload) => {
-    const { data } = await api.put(`/users/${id}`, payload);
-    return data;
+    return api.put(`/users/${id}`, payload);
   },
-
   remove: async (id) => {
-    const res = await api.del(`/users/${id}`);
-    return res.data; 
+    return api.del(`/users/${id}`);
   },
-
-
-  // dark mode
   updateDarkMode: async (darkMode) => {
-    const { data } = await api.patch("/users/dark-mode", { darkMode });
-    return data;
+    return api.patch("/users/dark-mode", { darkMode });
   }
 };

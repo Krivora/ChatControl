@@ -1,3 +1,4 @@
+// useUsers.js
 import { useEffect, useState } from "react";
 import { UsersApi } from "../api";
 
@@ -9,31 +10,34 @@ export function useUsers() {
     setLoading(true);
     try {
       const res = await UsersApi.list();
-      setUsers(res.data || res); // depende de cómo devuelvas
+      setUsers(res.data || res);
     } catch (err) {
-      console.error("Error cargando usuarios", err);
+      throw err; // ❌ no mostramos alert aquí
     } finally {
       setLoading(false);
     }
   };
 
   const createUser = async (user) => {
-    await UsersApi.create(user);
+    const res = await UsersApi.create(user);
     await fetchUsers();
+    return res;
   };
 
   const updateUser = async (id, user) => {
-    await UsersApi.update(id, user);
+    const res = await UsersApi.update(id, user);
     await fetchUsers();
+    return res;
   };
 
   const deleteUser = async (id) => {
-    await UsersApi.remove(id);
+    const res = await UsersApi.remove(id);
     await fetchUsers();
+    return res;
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers().catch(() => {});
   }, []);
 
   return { users, loading, fetchUsers, createUser, updateUser, deleteUser };

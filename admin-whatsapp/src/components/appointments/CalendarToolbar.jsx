@@ -16,18 +16,19 @@ export default function CalendarToolbar({
   const { darkMode } = useTheme();
 
   // Superficie (botones/chips) en claro/oscuro
-  const surface =
-    darkMode
-      ? "bg-[#2a2a2a] text-gray-100 hover:bg-[#383838] shadow"
-      : "bg-white text-gray-800 hover:bg-gray-100 shadow";
+  const surface = darkMode
+    ? "bg-[#2a2a2a] text-gray-100 hover:bg-[#383838] shadow"
+    : "bg-white text-gray-800 hover:bg-gray-100 shadow";
 
-  const iconBtn = `p-2 rounded-lg ${surface}`;
-  const chipBtn = `flex items-center gap-2 px-3 py-2 rounded-lg ${surface}`;
+  const iconBtn = `p-2 rounded-lg transition-colors ${surface}`;
+  const chipBtn = `flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${surface}`;
 
   return (
     <div
-      className={`flex items-center justify-between px-1 py-5 border-t ${
-        darkMode ? " border-gray-800" : " border-gray-200"
+      className={`flex items-center justify-between px-2 py-5 border-t ${
+        darkMode
+          ? "bg-[#181818] border-gray-800 text-gray-100"
+          : "bg-gray-50 border-gray-200 text-gray-800"
       }`}
     >
       {/* Left controls */}
@@ -63,8 +64,19 @@ export default function CalendarToolbar({
       </div>
 
       {/* Center text */}
-      <div className={`text-sm ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
-        <span className="font-bold text-3xl">{totalToday}</span> appointments today
+      <div
+        className={`text-sm ${
+          darkMode ? "text-gray-200" : "text-gray-700"
+        }`}
+      >
+        <span
+          className={`font-bold text-3xl ${
+            darkMode ? "text-white" : "text-black"
+          }`}
+        >
+          {totalToday}
+        </span>{" "}
+        appointments today
       </div>
 
       {/* Right controls */}

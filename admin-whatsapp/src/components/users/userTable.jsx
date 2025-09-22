@@ -1,6 +1,7 @@
 import { Edit, Delete } from "@mui/icons-material";
-
-export default function UsersTable({ users, loading, onEdit, onDelete, darkMode }) {
+import { useTheme } from "../../context/ThemeContext";
+export default function UsersTable({ users, loading, onEdit, onDelete }) {
+  const { darkMode } = useTheme();
   if (loading) {
     return (
       <div className={`p-4 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -16,7 +17,9 @@ export default function UsersTable({ users, loading, onEdit, onDelete, darkMode 
       </div>
     );
   }
-
+  const actionBtn = darkMode
+    ? "rounded-full p-1 text-gray-400 hover:bg-[#333333] hover:text-white"
+    : "rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800";
   return (
     <div
       className={`overflow-x-auto rounded-xl border shadow-sm ${
@@ -31,11 +34,11 @@ export default function UsersTable({ users, loading, onEdit, onDelete, darkMode 
           }`}
         >
           <tr>
-            <th className="px-6 py-3">ID</th>
             <th className="px-6 py-3">Nombre</th>
             <th className="px-6 py-3">Apellido</th>
             <th className="px-6 py-3">Email</th>
             <th className="px-6 py-3">Teléfono</th>
+            <th className="px-6 py-3">Genero</th>
             <th className="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
@@ -51,9 +54,6 @@ export default function UsersTable({ users, loading, onEdit, onDelete, darkMode 
               key={u.id}
               className={`hover:${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"}`}
             >
-              <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                {u.id}
-              </td>
               <td className={`px-6 py-4 font-medium ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
                 {u.nombre}
               </td>
@@ -66,19 +66,16 @@ export default function UsersTable({ users, loading, onEdit, onDelete, darkMode 
               <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                 {u.telefono}
               </td>
+              <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                {u.genero}
+              </td>
               <td className="px-6 py-4 text-right">
                 <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => onEdit(u)}
-                    className="rounded-full p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                  >
-                    <Edit fontSize="small" />
-                  </button>
-                  <button
-                    onClick={() => onDelete(u.id)}
-                    className="rounded-full p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
-                  >
+                  <button onClick={() => onDelete(u.id)} className={actionBtn}>
                     <Delete fontSize="small" />
+                  </button>
+                  <button onClick={() => onEdit(u.id)} className={actionBtn}>
+                    <Edit fontSize="small" />
                   </button>
                 </div>
               </td>

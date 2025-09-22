@@ -1,14 +1,19 @@
 import { useUsers } from "../hooks/useUsers";
 import { useEffect, useState } from "react";
+import { Add } from "@mui/icons-material";
+import { useTheme } from "../context/ThemeContext";
 import UsersTable from "../components/users/userTable";
 import UserFormDialog from "../components/users/userFormDialog";
-import Swal from "sweetalert2";
+import { useAlert } from "../utils/alert";
 
 export default function UsersPage() {
+  const { darkMode } = useTheme();
   const { users, loading, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
+  const { showConfirm, showSnack } = useAlert();
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editUser, setEditUser] = useState(null);
+  const [formError, setFormError] = useState({}); // 👈 inicial como objeto vacío
 
   useEffect(() => {
     fetchUsers();
@@ -16,52 +21,67 @@ export default function UsersPage() {
 
   const handleCreate = () => {
     setEditUser(null);
+    setFormError({}); // limpiamos errores previos
     setOpenDialog(true);
   };
 
   const handleEdit = (user) => {
     setEditUser(user);
+    setFormError({});
     setOpenDialog(true);
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: "¿Eliminar usuario?",
-      text: "Esta acción no se puede deshacer",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-    });
+    const result = await showConfirm({
+        title: "¿Eliminar usuario?",
+        text: "Esta acción no se puede deshacer",
+        confirmText: "Sí, eliminar",
+        cancelText: "Cancelar",
+      });
 
-    if (result.isConfirmed) {
-      await deleteUser(id);
-      Swal.fire("Eliminado", "Usuario eliminado.", "success");
+      if (result.isConfirmed) {
+        try {
+          await deleteUser(id);
+          showSnack("Usuario eliminado", "success"); // ✅ snackbar
+        } catch (e) {
+          showSnack("No se pudo eliminar el usuario", "error"); // ❌ snackbar error
+        }
     }
   };
 
   const handleSubmit = async (data) => {
-    if (editUser) {
-      await updateUser(editUser.id, data);
-      Swal.fire("Actualizado", "Usuario modificado exitosamente.", "success");
-    } else {
-      await createUser(data);
-      Swal.fire("Guardado", "Usuario creado exitosamente.", "success");
+    try {
+      if (editUser) {
+        await updateUser(editUser.id, data);
+        showSnack("Usuario actualizado", "success");
+      } else {
+        await createUser(data);
+        showSnack("Usuario creado", "success");
+      }
+      setOpenDialog(false);
+    } catch (e) {
+      showSnack(e.message || "Error al guardar", "error");
     }
-    setOpenDialog(false);
   };
 
   return (
-    <div className="p-6">
+    <div
+      className={`p-6 h-[calc(100vh-120px)] ${
+        darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"
+      }`}
+    >
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold">Usuarios</h1>
         <button
           onClick={handleCreate}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          className={`flex items-center gap-2 px-4 py-2 rounded transition-colors
+            ${
+              darkMode
+                ? "bg-[#960b2b] text-white hover:bg-red-800"
+                : "bg-[#960b2b] text-white hover:bg-red-700"
+            }`}
         >
-          + Nuevo Usuario
+          <Add fontSize="small" /> Nuevo Usuario
         </button>
       </div>
 
@@ -79,8 +99,8 @@ export default function UsersPage() {
         onSubmit={handleSubmit}
         initialData={editUser}
         isEdit={!!editUser}
+        serverErrors={formError} // 👈 pasamos los errores al form
       />
-
     </div>
   );
 }

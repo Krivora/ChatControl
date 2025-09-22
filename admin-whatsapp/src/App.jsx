@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { AlertProvider } from "./utils/alert";
 import Login from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Messages from "./pages/MessagesPage";
@@ -10,21 +11,23 @@ import Layout from "./components/Layout";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
+    <AlertProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
 
-      <Route element={<PrivateRoute />}>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/appointments" element={<AppointmentsPage />} />
-          <Route path="/configuration" element={<ConfigurationPage />} />
-          <Route path="/users" element={<UsersPage />} />
+        <Route element={<PrivateRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/appointments" element={<AppointmentsPage />} />
+            <Route path="/configuration" element={<ConfigurationPage />} />
+            <Route path="/users" element={<UsersPage />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </AlertProvider>
   );
 }
 
