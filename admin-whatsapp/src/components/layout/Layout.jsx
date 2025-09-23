@@ -5,7 +5,7 @@ import Navbar from "./Navbar";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 
-export default function Layout({ user, onLogout }) {
+export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { darkMode } = useTheme();
   const { user, logout } = useAuth();

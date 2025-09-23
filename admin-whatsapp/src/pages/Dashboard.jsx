@@ -163,8 +163,6 @@ export default function Dashboard() {
         color: range.color,
       };
     });
-
-    console.log("profiles calculados:", profiles.slice(0, 20));
     setTopProfiles(profiles);
   }, [conversations]);
 

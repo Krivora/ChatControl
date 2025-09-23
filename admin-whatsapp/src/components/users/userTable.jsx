@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Edit, Delete,Search } from "@mui/icons-material";
 import { useTheme } from "../../context/ThemeContext";
 import Pagination from "./Pagination";
+import { Skeleton } from "@mui/material";
 
 export default function UsersTable({ users, loading, onEdit, onDelete }) {
   const { darkMode } = useTheme();
@@ -35,8 +36,51 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
 
   if (loading) {
     return (
-      <div className={`p-4 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-        Cargando usuarios...
+      <div
+        className={`overflow-x-auto rounded-xl border shadow-sm ${
+          darkMode ? "border-gray-700 bg-[#1a1a1a]" : "border-gray-200 bg-white"
+        }`}
+      >
+        <table className="w-full border-collapse text-left text-sm">
+          <thead
+            className={`text-xs font-semibold uppercase ${
+              darkMode ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-50 text-gray-500"
+            }`}
+          >
+            <tr>
+              <th className="px-6 py-3">Nombre</th>
+              <th className="px-6 py-3">Apellido</th>
+              <th className="px-6 py-3">Email</th>
+              <th className="px-6 py-3">Teléfono</th>
+              <th className="px-6 py-3">Género</th>
+              <th className="px-6 py-3 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={120} animation="wave" />
+                </td>
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={100} animation="wave" />
+                </td>
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={160} animation="wave" />
+                </td>
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={120} animation="wave" />
+                </td>
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={80} animation="wave" />
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <Skeleton variant="circular" width={28} height={28} animation="wave" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
