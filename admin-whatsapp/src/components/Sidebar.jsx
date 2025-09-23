@@ -21,7 +21,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
-       { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
+    { id: "assignments", label: "Asignados", icon: <FaEnvelope />, path: "/assignments" },
+    { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
     { id: "configuration", label: "configuration", icon: <FaCog />, path: "/configuration" },
  
   ];

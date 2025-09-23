@@ -13,31 +13,33 @@ export default function ChatWindow({ chat, darkMode }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
-  // Traer usuarios y generar mensajes
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const users = await UsersApi.list();
-        // Filtramos los usuarios que no están eliminados
-        const activeUsers = users.filter(u => !u.deleted_at);
-        // Generamos mensajes usando u dentro del map
-        const msgs = activeUsers.map(u => 
-  `${u.nombre} ${u.apellido}, tu asesor, te contactará desde ${formatPhone(u.telefono)} para asegurarse de que tu experiencia sea rápida, fácil y sin complicaciones.`
-);
-
-        setUsersMessages(msgs);
-      } catch (error) {
-        console.error("Error al traer usuarios:", error);
-      }
-    };
-    fetchUsers();
-  }, []);
-
   const formatPhone = (phone) => {
     if (!phone) return "";
     const s = phone.toString();
     return `${s.slice(0,3)} ${s.slice(3,6)} ${s.slice(6,10)}`;
   };
+
+  // Traer usuarios y generar mensajes de asignación
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await UsersApi.list();
+        // Asegurarnos de que sea un array
+        const allUsers = Array.isArray(res) ? res : res?.data || [];
+        const activeUsers = allUsers.filter(u => !u.deleted_at);
+
+        const msgs = activeUsers.map(u =>
+          `${u.nombre} ${u.apellido}, tu asesor, te contactará desde ${formatPhone(u.telefono)} para asegurarse de que tu experiencia sea rápida, fácil y sin complicaciones.`
+        );
+
+        setUsersMessages(msgs);
+      } catch (error) {
+        console.error("Error al traer usuarios:", error);
+        setUsersMessages([]); // fallback
+      }
+    };
+    fetchUsers();
+  }, []);
 
   if (!chat) {
     return (
@@ -57,7 +59,7 @@ export default function ChatWindow({ chat, darkMode }) {
         content: botMsg.content,
         created_at: botMsg.created_at,
       });
-      const answer = chat.answers[index];
+      const answer = chat.answers?.[index];
       if (answer) {
         chatEntries.push({
           id: `ans-${answer.id}`,
@@ -90,13 +92,7 @@ export default function ChatWindow({ chat, darkMode }) {
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div
-        className={`p-4 border-b font-semibold flex-shrink-0 ${
-          darkMode
-            ? "bg-[#1f1f1f] border-gray-700 text-white"
-            : "bg-white border-gray-200 text-gray-900"
-        }`}
-      >
+      <div className={`p-4 border-b font-semibold flex-shrink-0 ${darkMode ? "bg-[#1f1f1f] border-gray-700 text-white" : "bg-white border-gray-200 text-gray-900"}`}>
         {chat.customer?.full_name || "Cliente"}
       </div>
 
@@ -107,25 +103,11 @@ export default function ChatWindow({ chat, darkMode }) {
           const isAnswer = msg.sender === "answer";
 
           return (
-            <div
-              key={msg.id}
-              className={`flex ${isAnswer ? "justify-start" : "justify-end"}`}
-            >
-              <div
-                className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${
-                  isBot
-                    ? "bg-[#960b2b] text-white rounded-br-none"
-                    : darkMode
-                    ? "bg-[#2a2a2a] text-white rounded-bl-none"
-                    : "bg-gray-200 text-gray-900 rounded-bl-none"
-                }`}
-              >
+            <div key={msg.id} className={`flex ${isAnswer ? "justify-start" : "justify-end"}`}>
+              <div className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${isBot ? "bg-[#960b2b] text-white rounded-br-none" : darkMode ? "bg-[#2a2a2a] text-white rounded-bl-none" : "bg-gray-200 text-gray-900 rounded-bl-none"}`}>
                 <p className="whitespace-pre-line">{msg.content}</p>
                 <span className="text-[11px] opacity-70 block mt-1 text-right">
-                  {new Date(msg.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
             </div>
@@ -135,71 +117,74 @@ export default function ChatWindow({ chat, darkMode }) {
       </div>
 
       {/* Input y botón dinámico */}
-      <div
-        className={`p-3 flex gap-2 border-t flex-shrink-0 ${
-          darkMode
-            ? "bg-[#1f1f1f] border-gray-700"
-            : "bg-white border-gray-200"
-        }`}
-        style={{ minHeight: 56 }}
-      >
+      <div className={`p-3 flex gap-2 border-t flex-shrink-0 ${darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"}`} style={{ minHeight: 56 }}>
         <input
           type="text"
           placeholder="Escribe un mensaje..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={loading}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${
-            darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
-          }`}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"}`}
         />
 
         {input.trim() ? (
-          <button
-            onClick={() => handleSend(input)}
-            disabled={loading}
-            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
-          >
+          <button onClick={() => handleSend(input)} disabled={loading} className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]">
             {loading ? "Enviando..." : "Enviar"}
           </button>
         ) : (
-          <button
-            onClick={() => setShowModal(true)}
-            disabled={loading}
-            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
-          >
+          <button onClick={() => setShowModal(true)} disabled={loading} className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]">
             Asignar
           </button>
         )}
       </div>
 
       {/* Modal de selección */}
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
-          <div className="bg-white dark:bg-[#2a2a2a] p-6 rounded-lg w-96">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Selecciona un mensaje
-            </h3>
-            <div className="flex flex-col gap-3">
-              {usersMessages.map((msg, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSend(msg)}
-                  className="px-4 py-2 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] text-left"
-                >
-                  {msg}
-                </button>
-              ))}
-            </div>
+      {/* Modal de selección */}
+{showModal && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
+    <div className="bg-white dark:bg-[#2a2a2a] rounded-xl w-96 shadow-lg flex flex-col max-h-[80vh]">
+      
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Selecciona un mensaje
+        </h3>
+      </div>
+
+      {/* Lista scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {usersMessages.length > 0 ? (
+          usersMessages.map((msg, i) => (
             <button
-              onClick={() => setShowModal(false)}
-              className="mt-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              key={i}
+              onClick={() => handleSend(msg)}
+              className="w-full px-4 py-2 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] text-left whitespace-normal break-words shadow-sm"
             >
-              Cancelar
+              {msg}
             </button>
-          </div>
-        </div>
-      )}
+          ))
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            No hay usuarios disponibles.
+          </p>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+        <button
+          onClick={() => setShowModal(false)}
+          className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
+
+//perron

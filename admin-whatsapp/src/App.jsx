@@ -8,6 +8,7 @@ import ConfigurationPage from "./pages/ConfigurationPage";
 import UsersPage from "./pages/UsersPage";
 import PrivateRoute from "./routes/PrivateRoute";
 import Layout from "./components/Layout";
+import AssignmentPage from "./pages/AssignmentPage";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/appointments" element={<AppointmentsPage />} />
             <Route path="/configuration" element={<ConfigurationPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/assignments" element={<AssignmentPage />} />
           </Route>
         </Route>
 

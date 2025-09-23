@@ -192,17 +192,20 @@ export default function Dashboard() {
   }, [customers, weekRange]);
 
   // ---- Fetch users ----
-  useEffect(() => {
+    useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const data = await UsersApi.list();
-        setUsers(data || []);
+        const res = await UsersApi.list();
+        // asumimos que la API devuelve { data: [...] }
+        setUsers(res.data || []);
       } catch (err) {
         console.error(err);
+        setUsers([]); 
       }
     };
     fetchUsers();
   }, []);
+
 
   // ---- Fetch appointments ----
   useEffect(() => {
