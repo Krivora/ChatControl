@@ -46,11 +46,26 @@ export function AlertProvider({ children }) {
         open={snack.open}
         autoHideDuration={3000}
         onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleClose} severity={snack.severity} variant="filled">
-          {snack.message}
-        </Alert>
+      <Alert
+        onClose={handleClose}
+        severity={snack.severity}
+        variant="filled"
+        sx={{
+          bgcolor: darkMode ? "#1e1e1e" : "#fff",
+          color: darkMode ? "#22c55e" : "#111",
+          fontWeight: 600,
+          "& .MuiAlert-icon": {
+            color: darkMode ? "#22c55e" : "#111",
+          },
+        }}
+      >
+        {snack.message}
+      </Alert>
+
+
+
       </Snackbar>
     </AlertContext.Provider>
   );

@@ -7,7 +7,7 @@ import AppointmentsPage from "./pages/AppointmentPage";
 import ConfigurationPage from "./pages/ConfigurationPage";
 import UsersPage from "./pages/UsersPage";
 import PrivateRoute from "./routes/PrivateRoute";
-import Layout from "./components/Layout";
+import Layout from "./components/layout/Layout";
 import AssignmentPage from "./pages/AssignmentPage";
 
 function App() {

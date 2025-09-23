@@ -46,17 +46,37 @@ export const UsersRepo = {
   },
 
   async update(id, { nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash }) {
-    const { rows } = await pool.query(`
-      UPDATE users
-      SET nombre=$1, apellido=$2, email=$3, telefono=$4,
-          fecha_nacimiento=$5, genero=$6, password=$7,
-          updated_at=NOW()
-      WHERE id=$8
-      RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, dark_mode, created_at
-    `, [nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash, id]);
+    // valores obligatorios
+    const values = [nombre, apellido, email, telefono, fecha_nacimiento, genero];
+    let set = `
+      nombre=$1, 
+      apellido=$2, 
+      email=$3, 
+      telefono=$4, 
+      fecha_nacimiento=$5, 
+      genero=$6
+    `;
 
+    // si hay password, lo agregamos
+    if (passwordHash) {
+      values.push(passwordHash);
+      set += `, password=$${values.length}`;
+    }
+
+    // id al final
+    values.push(id);
+
+    const query = `
+      UPDATE users
+      SET ${set}, updated_at=NOW()
+      WHERE id=$${values.length}
+      RETURNING id, nombre, apellido, email, telefono, fecha_nacimiento, genero, dark_mode, created_at;
+    `;
+
+    const { rows } = await pool.query(query, values);
     return rows[0];
   },
+
 
   async softDelete(id) {
     const { rows } = await pool.query(`

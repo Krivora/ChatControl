@@ -43,6 +43,7 @@ export default function UserFormDialog({
     register,
     handleSubmit,
     setError,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
@@ -50,6 +51,33 @@ export default function UserFormDialog({
     mode: "onChange",
   });
 
+  // Resetear valores cuando cambie el usuario que editas
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      // Editar: setea valores del usuario
+      let fecha_nacimiento = initialData.fecha_nacimiento || "";
+      if (fecha_nacimiento && fecha_nacimiento.length > 10) {
+        fecha_nacimiento = fecha_nacimiento.slice(0, 10);
+      }
+      let genero = ["M", "F", "Otro"].includes(initialData.genero)
+        ? initialData.genero
+        : "";
+      reset({ ...initialData, fecha_nacimiento, genero, password: "" });
+    } else {
+      // Crear: limpia todos los campos
+      reset({
+        nombre: "",
+        apellido: "",
+        email: "",
+        telefono: "",
+        genero: "",
+        fecha_nacimiento: "",
+        password: "",
+      });
+    }
+  }, [initialData, reset]);
+
+  //  Manejar errores que vengan del servidor
   useEffect(() => {
     if (serverErrors?.field && serverErrors?.message) {
       setError(serverErrors.field, {
@@ -58,6 +86,7 @@ export default function UserFormDialog({
       });
     }
   }, [serverErrors, setError]);
+
 
   const submitHandler = (data) => {
     if (isEdit && !data.password) {
@@ -116,28 +145,31 @@ export default function UserFormDialog({
                 helperText={errors.telefono?.message}
                 fullWidth
               />
-              <TextField
-                select
-                label="Género"
-                defaultValue=""
-                {...register("genero")}
-                error={!!errors.genero}
-                helperText={errors.genero?.message}
-                fullWidth
-              >
-                <MenuItem value="M">Masculino</MenuItem>
-                <MenuItem value="F">Femenino</MenuItem>
-                <MenuItem value="Otro">No especifica</MenuItem>
-              </TextField>
-              <TextField
-                type="date"
-                label="Fecha de nacimiento"
-                InputLabelProps={{ shrink: true }}
-                {...register("fecha_nacimiento")}
-                error={!!errors.fecha_nacimiento}
-                helperText={errors.fecha_nacimiento?.message}
-                fullWidth
-              />
+              {!isEdit && (
+              <>
+                <TextField
+                  select
+                  label="Género"
+                  {...register("genero")}
+                  error={!!errors.genero}
+                  helperText={errors.genero?.message}
+                  fullWidth
+                >
+                  <MenuItem value="M">Masculino</MenuItem>
+                  <MenuItem value="F">Femenino</MenuItem>
+                  <MenuItem value="Otro">No especifica</MenuItem>
+                </TextField>
+                <TextField
+                  type="date"
+                  label="Fecha de nacimiento"
+                  InputLabelProps={{ shrink: true }}
+                  {...register("fecha_nacimiento")}
+                  error={!!errors.fecha_nacimiento}
+                  helperText={errors.fecha_nacimiento?.message}
+                  fullWidth
+                />
+              </>
+              )}
             </div>
           </div>
 

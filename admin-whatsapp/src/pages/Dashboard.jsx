@@ -198,9 +198,12 @@ export default function Dashboard() {
         const res = await UsersApi.list();
         // asumimos que la API devuelve { data: [...] }
         setUsers(res.data || []);
+        const res = await UsersApi.list();
+        // asumimos que la API devuelve { data: [...] }
+        setUsers(res.data || []);
       } catch (err) {
         console.error(err);
-        setUsers([]); 
+        setUsers([]); // fallback por si falla
       }
     };
     fetchUsers();

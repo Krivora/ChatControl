@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../../context/ThemeContext";
 
-import { FaBars, FaHome, FaCog, FaEnvelope, FaRegUserCircle,FaCalendar } from "react-icons/fa";
+import { FaHome, FaCog, FaEnvelope, FaRegUserCircle, FaCalendar } from "react-icons/fa";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -15,16 +15,20 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   }, []);
 
   const isMobile = windowWidth < 768;
-  const sidebarWidth = isMobile ? (isOpen ? "w-36" : "w-16") : isOpen ? "w-56" : "w-16";
+  const sidebarWidth = isMobile
+    ? isOpen
+      ? "w-36"
+      : "w-16"
+    : isOpen
+    ? "w-56"
+    : "w-16";
 
   const menuItems = [
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
-    { id: "assignments", label: "Asignados", icon: <FaEnvelope />, path: "/assignments" },
     { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
-    { id: "configuration", label: "configuration", icon: <FaCog />, path: "/configuration" },
- 
+    { id: "configuration", label: "Configuración", icon: <FaCog />, path: "/configuration" },
   ];
 
   return (
@@ -33,15 +37,27 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         ${sidebarWidth}
         ${darkMode ? "bg-[#1f1f1f] text-white" : "bg-white text-gray-900"}`}
     >
-      {/* Botón abrir/cerrar */}
-      <button
+      {/* Logo */}
+      <div
+        className={`flex flex-col items-center justify-center py-4 cursor-pointer select-none`}
         onClick={() => setIsOpen(!isOpen)}
-        className={`p-3 text-xl flex items-center justify-center hover:bg-gray-200 dark:hover:bg-[#2a2a2a] ${
-          darkMode ? "text-white" : "text-gray-800"
-        }`}
       >
-        <FaBars />
-      </button>
+        {isOpen ? (
+          <>
+            <span className="text-xl font-bold text-[#960b2b]">Seminuevos</span>
+            <span
+              className={`text-sm font-medium ${
+                darkMode ? "text-gray-400" : "text-gray-600"
+              }`}
+            >
+              Nissan
+            </span>
+          </>
+        ) : (
+          // versión colapsada: solo la S
+          <span className="text-xl font-bold text-[#960b2b]">S</span>
+        )}
+      </div>
 
       {/* Menú */}
       <nav className="flex flex-col gap-2 flex-1 mt-2">
