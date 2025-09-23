@@ -3,14 +3,17 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeContext"; // 👈 tu contexto global
+import { AuthProvider } from "./context/AuthContext";
 import "./index.css"; // estilos globales (Tailwind, etc.)
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
