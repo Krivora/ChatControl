@@ -195,10 +195,12 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const data = await UsersApi.list();
-        setUsers(data || []);
+        const res = await UsersApi.list();
+        // asumimos que la API devuelve { data: [...] }
+        setUsers(res.data || []);
       } catch (err) {
         console.error(err);
+        setUsers([]); // fallback por si falla
       }
     };
     fetchUsers();

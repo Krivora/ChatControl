@@ -92,14 +92,13 @@ export default function UsersPage() {
         onDelete={handleDelete}
       />
 
-      {/* Modal para crear/editar */}
       <UserFormDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         onSubmit={handleSubmit}
         initialData={editUser}
         isEdit={!!editUser}
-        serverErrors={formError} // 👈 pasamos los errores al form
+        serverErrors={formError}
       />
     </div>
   );
