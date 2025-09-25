@@ -1,15 +1,13 @@
 import React, { useState } from "react";
 import logoLight from "../assets/logo.png";
 import logoDark from "../assets/logo.png";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth"; // 👈 usamos el hook centralizado
+import { useAuth } from "../context/AuthContext";
 
 export default function Login({ darkMode }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
   const { loginUser } = useAuth(); // 👈 login del hook
 
   const handleSubmit = async (e) => {
@@ -18,12 +16,9 @@ export default function Login({ darkMode }) {
     setLoading(true);
 
     try {
-      await loginUser(email, password); // 👈 ya hace login + guarda user/token
-      navigate("/");
+      await loginUser(email, password); // 👈 esto ya redirige
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
