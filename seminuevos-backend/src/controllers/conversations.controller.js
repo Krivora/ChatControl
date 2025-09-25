@@ -11,5 +11,5 @@ import { ok } from "../utils/ApiResponse.js";
 
 export const getFull = asyncHandler(async (req, res) => {
   const data = await ConversationsService.getFull(req);
-  return ok(res, data); // 🔹 NO lo destructures como {items, meta}
+  return ok(res, data); 
 });

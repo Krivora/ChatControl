@@ -5,7 +5,7 @@ import StatCard from "../components/dashboard/StatCard";
 import WeeklyChart from "../components/dashboard/WeeklyChart";
 import { useTheme } from "../context/ThemeContext";
 import { UsersApi } from "../api/users";
-import { getAppointments } from "../api/appointments";
+import { AppointmentsApi } from "../api/appointments"; 
 
 export default function Dashboard() {
   const { darkMode } = useTheme();
@@ -209,8 +209,8 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const data = await getAppointments();
-        setAppointments(data || []);
+        const res = await AppointmentsApi.list();
+        setAppointments(res.data || []);
       } catch (err) {
         console.error(err);
       }

@@ -1,18 +1,17 @@
-// src/hooks/useAppointments.js
 import { useState, useEffect } from "react";
-import { getAppointments } from "../api";
+import { AppointmentsApi } from "../api/appointments";
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const loadAppointments = async () => {
+  const loadAppointments = async (params = {}) => {
     setLoading(true);
     setError("");
     try {
-      const data = await getAppointments();
-      setAppointments(data);
+      const res = await AppointmentsApi.list(params);
+      setAppointments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Error cargando citas", err);
       setError(err.message || "Error al cargar citas");
@@ -21,7 +20,6 @@ export function useAppointments() {
     }
   };
 
-  // Cargar automáticamente al montar el componente
   useEffect(() => {
     loadAppointments();
   }, []);
