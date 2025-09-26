@@ -1,7 +1,6 @@
 // src/services/conversations.service.js
 import { ConversationsRepo } from "../repositories/conversations.repo.js";
 import { parsePagination } from "../utils/pagination.js";
-import { ApiError } from "../utils/ApiError.js";
 
 export const ConversationsService = {
   async list(req) {

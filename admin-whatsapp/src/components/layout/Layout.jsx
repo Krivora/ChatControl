@@ -3,12 +3,10 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import { useTheme } from "../../context/ThemeContext";
-import { useAuth } from "../../context/AuthContext";
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { darkMode } = useTheme();
-  const { user, logout } = useAuth();
 
   return (
     <div
@@ -19,7 +17,7 @@ export default function Layout() {
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex flex-col flex-1">
-        <Navbar user={user} onLogout={logout} />
+        <Navbar />
         <div className="flex-1 p-4 md:p-6 overflow-y-auto">
           <Outlet />
         </div>

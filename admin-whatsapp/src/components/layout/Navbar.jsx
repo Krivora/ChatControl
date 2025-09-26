@@ -7,7 +7,7 @@ import { AccountCircle, Logout, ExpandMore } from "@mui/icons-material";
 
 export default function Navbar() {
   const { darkMode } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logoutUser } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -31,14 +31,15 @@ export default function Navbar() {
       <ThemeToggle />
 
       {user && (
-        <div
-          ref={dropdownRef}
-          className="relative ml-4"
-        >
+        <div ref={dropdownRef} className="relative ml-4">
           {/* Botón usuario */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a2a2a] transition-colors"
+            className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
+              darkMode
+                ? "hover:bg-[#2a2a2a]"
+                : "hover:bg-gray-100"
+            }`}
           >
             {/* Avatar iniciales */}
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
@@ -63,8 +64,13 @@ export default function Navbar() {
                   : "bg-white text-gray-800 border-gray-200"
               }`}
             >
+              {/* Opción: Mi perfil */}
               <div
-                className="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#3a3a3a] cursor-pointer"
+                className={`flex items-center gap-2 px-4 py-3 cursor-pointer transition-colors ${
+                  darkMode
+                    ? "hover:bg-[#3a3a3a]"
+                    : "hover:bg-gray-300"
+                }`}
                 onClick={() => {
                   navigate("/profile");
                   setMenuOpen(false);
@@ -73,11 +79,17 @@ export default function Navbar() {
                 <AccountCircle fontSize="small" />
                 <span>Mi perfil</span>
               </div>
+
+              {/* Opción: Logout */}
               <div
-                className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-[#3a3a3a] cursor-pointer"
+                className={`flex items-center gap-2 px-4 py-3 text-red-600 cursor-pointer transition-colors ${
+                  darkMode
+                    ? "hover:bg-[#3a3a3a]"
+                    : "hover:bg-gray-300"
+                }`}
                 onClick={() => {
                   setMenuOpen(false);
-                  logout();
+                  logoutUser();
                 }}
               >
                 <Logout fontSize="small" />

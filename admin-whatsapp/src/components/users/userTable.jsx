@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Edit, Delete,Search } from "@mui/icons-material";
+import { Edit, Delete } from "@mui/icons-material";
 import { useTheme } from "../../context/ThemeContext";
-import Pagination from "./Pagination";
 import { Skeleton } from "@mui/material";
+import TableFilters from "../common/TableFilters";
+import Pagination from "../common/TablePagination";
 
 export default function UsersTable({ users, loading, onEdit, onDelete }) {
   const { darkMode } = useTheme();
@@ -15,17 +16,13 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
   // 🔸 Filtrado
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
-      // transformar el genero
       const generoTexto =
         u.genero === "M" ? "masculino" : u.genero === "F" ? "femenino" : "otro";
 
-      // concatenar todo en un string searchable
       const fullData = `${u.nombre} ${u.apellido} ${u.email} ${u.telefono} ${generoTexto}`.toLowerCase();
-
       return fullData.includes(search.toLowerCase());
     });
   }, [users, search]);
-
 
   // 🔸 Paginación
   const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
@@ -103,49 +100,21 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
         darkMode ? "border-gray-700 bg-[#1a1a1a]" : "border-gray-200 bg-white"
       }`}
     >
-      {/* 🔍 Filtro */}
-      <div className="p-3 flex flex-col sm:flex-row justify-between gap-3">
-        <div className="relative w-full sm:w-64">
-          <Search
-            fontSize="small"
-            className={`absolute left-3 top-1/2 -translate-y-1/2 
-              ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-          />
-          <input
-            type="text"
-            placeholder="Buscar usuario..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className={`pl-10 pr-3 py-2 rounded-lg text-sm w-full 
-              ${darkMode
-                ? "bg-[#2a2a2a] text-gray-200 placeholder-gray-500"
-                : "bg-gray-100 text-gray-700 placeholder-gray-400"
-              }`}
-          />
-        </div>
-
-        {/* Selector filas */}
-        <select
-          value={rowsPerPage}
-          onChange={(e) => {
-            setRowsPerPage(Number(e.target.value));
-            setPage(1);
-          }}
-          className={`px-2 py-2 rounded-lg text-sm ${
-            darkMode
-              ? "bg-[#2a2a2a] text-gray-200"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          <option value={5}>5 por página</option>
-          <option value={10}>10 por página</option>
-          <option value={20}>20 por página</option>
-          <option value={50}>50 por página</option>
-        </select>
-      </div>
+      {/* ✅ Filtros */}
+      <TableFilters
+        search={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        rowsPerPage={rowsPerPage}
+        onRowsChange={(val) => {
+          setRowsPerPage(val);
+          setPage(1);
+        }}
+        darkMode={darkMode}
+        placeholder="Buscar usuario..."
+      />
 
       {/* Tabla */}
       <table className="w-full border-collapse text-left text-sm">
@@ -173,7 +142,11 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
               key={u.id}
               className={`hover:${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"}`}
             >
-              <td className={`px-6 py-4 font-medium ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+              <td
+                className={`px-6 py-4 font-medium ${
+                  darkMode ? "text-gray-100" : "text-gray-900"
+                }`}
+              >
                 {u.nombre}
               </td>
               <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -204,12 +177,12 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
         </tbody>
       </table>
 
+      {/* 📄 Paginación al fondo */}
       <Pagination
         page={page}
         totalPages={totalPages}
         onChange={(newPage) => setPage(newPage)}
       />
-
     </div>
   );
 }

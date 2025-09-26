@@ -1,39 +1,70 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { login as loginRequest } from "../api"; // 👈 importamos tu api
 
-// Crear el contexto
 const AuthContext = createContext();
 
-// Hook para usar el contexto más fácil
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-// Provider
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const navigate = useNavigate();
 
-  // Cargar usuario de localStorage o API al iniciar
+  // Al iniciar, cargar datos del localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const storedToken = localStorage.getItem("token");
+
+    if (storedUser && storedToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+        setToken(storedToken);
+      } catch (e) {
+        console.error("Error parsing stored user:", e);
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
     }
   }, []);
 
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+  // 👉 login
+  const loginUser = async (email, password) => {
+    try {
+      const res = await loginRequest(email, password);
+      const { user: loggedUser, token: jwtToken } = res.data;
+
+      // Guardar en localStorage
+      localStorage.setItem("user", JSON.stringify(loggedUser));
+      localStorage.setItem("token", jwtToken);
+
+      // Actualizar estado global
+      setUser(loggedUser);
+      setToken(jwtToken);
+
+      navigate("/"); // redirige al dashboard
+      return loggedUser;
+    } catch (err) {
+      console.error("Login error:", err);
+      throw err; // lo manejas en tu formulario
+    }
   };
 
-  const logout = () => {
+  // 👉 logout
+  const logoutUser = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem("user");
-    // opcional: hacer logout en el backend
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loginUser, logoutUser }}>
       {children}
     </AuthContext.Provider>
   );
+}
+
+// Hook para consumir el contexto
+export function useAuth() {
+  return useContext(AuthContext);
 }

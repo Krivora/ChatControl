@@ -5,7 +5,7 @@ import appointments from './appointments.routes.js';
 import assignments from './assignments.routes.js';
 import customers from './customers.routes.js';
 import conversations from './conversations.routes.js';
-import messages from './messages.routes.js';
+
 import slots from './slots.routes.js';
 import users from './users.routes.js';
 import whatsapp from './whatsapp.routes.js';
@@ -22,7 +22,7 @@ router.use('/appointments', appointments);
 router.use('/assignments', assignments);
 router.use('/customers', customers);
 router.use('/conversations', conversations);
-router.use('/messages', messages);
+
 router.use('/slots', slots);
 router.use('/users', users);
 router.use('/whatsapp', whatsapp);

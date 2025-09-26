@@ -1,7 +1,6 @@
 import { useTheme } from "../context/ThemeContext"; 
 import { List, CalendarMonth } from "@mui/icons-material";
 import { useState } from "react";
-import CalendarToolbar from "../components/appointments/CalendarToolbar";
 import AppointmentsCalendar from "../components/appointments/AppointmentsCalendar";
 import AppointmentsList from "../components/appointments/AppointmentsList";
 
@@ -60,9 +59,6 @@ export default function AppointmentsPage() {
           Calendar
         </button>
       </div>
-
-      {/* Toolbar solo para la vista de calendario */}
-      {view === "calendar" && <CalendarToolbar currentDate={currentDate} />}
 
       {/* Cambiar entre Calendar y List */}
       {view === "calendar" ? (

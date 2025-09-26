@@ -1,4 +1,3 @@
-// src/hooks/useAvailableSlots.js
 import { useState } from "react";
 import { getAvailableSlots } from "../api";
 
