@@ -36,13 +36,29 @@ export const AssignmentsRepo = {
   },
 
   async create({ conversation_id, user_id, status }) {
+    // 🚫 Verificar si ya existe cualquier registro para este usuario en la conversación
+    const { rows: existing } = await pool.query(`
+      SELECT id FROM assignments
+      WHERE conversation_id = $1
+        AND user_id = $2
+      LIMIT 1
+    `, [conversation_id, user_id]);
+
+    if (existing.length > 0) {
+      throw new Error("DUPLICATE_ASSIGNMENT");
+    }
+
+    // ✅ Insertar nuevo
     const { rows } = await pool.query(`
       INSERT INTO assignments (conversation_id, user_id, status, assigned_at)
       VALUES ($1, $2, $3, NOW())
       RETURNING *
     `, [conversation_id, user_id, status || 'active']);
+
     return rows[0];
   },
+
+
 
   async update(id, { status, user_id }) {
     const { rows } = await pool.query(`
