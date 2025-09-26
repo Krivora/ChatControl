@@ -51,67 +51,93 @@ export default function AppointmentForm({ open, onClose, onSave, initialData }) 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
-        {initialData ? "Editar cita" : "Nueva cita"}
+        {initialData ? "Reagendar Cita" : "Agendar Cita"}
       </DialogTitle>
-      <DialogContent className="flex flex-col gap-4 mt-2">
-        <TextField
-          label="Cliente"
-          name="customer_name"
-          value={form.customer_name}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="WhatsApp"
-          name="whatsapp_id"
-          value={form.whatsapp_id}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Fecha"
-          name="date"
-          type="date"
-          value={form.date}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          fullWidth
-        />
-        <div className="flex gap-4">
+
+      {/* 👇 quitamos el flex directo, usamos un stack con padding normal */}
+      <DialogContent dividers>
+        <div className="flex flex-col gap-4 mt-2">
           <TextField
-            label="Hora inicio"
-            name="time_start"
-            type="time"
-            value={form.time_start}
+            label="Cliente"
+            name="customer_name"
+            value={form.customer_name}
             onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{input: { readOnly: true }}}
+            InputLabel={{ shrink: true }}
+            variant="outlined"
+            size="small"
+            fullWidth
+            
+          />
+          <TextField
+            label="WhatsApp"
+            name="whatsapp_id"
+            value={form.whatsapp_id}
+            onChange={handleChange}
+            slotProps={{input: { readOnly: true }}}
+            InputLabel={{ shrink: true }}
+            variant="outlined"
+            size="small"
             fullWidth
           />
           <TextField
-            label="Hora fin"
-            name="time_end"
-            type="time"
-            value={form.time_end}
+            label="Fecha"
+            name="date"
+            type="date"
+            value={form.date}
             onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
+            InputLabel={{ shrink: true }}
+            variant="outlined"
+            size="small"
             fullWidth
           />
+
+          {/* 👇 cada campo en su propio contenedor */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <TextField
+              label="Hora inicio"
+              name="time_start"
+              type="time"
+              value={form.time_start}
+              onChange={handleChange}
+              InputLabel={{ shrink: true }}
+              variant="outlined"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Hora fin"
+              name="time_end"
+              type="time"
+              value={form.time_end}
+              onChange={handleChange}
+              InputLabel={{ shrink: true }}
+              variant="outlined"
+              size="small"
+              fullWidth
+            />
+          </div>
+
+          <TextField
+            select
+            label="Estado"
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            InputLabel={{ shrink: true }}
+            variant="outlined"
+            size="small"
+            fullWidth
+          >
+            <MenuItem value="pending">Pendiente</MenuItem>
+            <MenuItem value="confirmed">Confirmada</MenuItem>
+            <MenuItem value="cancelled">Cancelada</MenuItem>
+          </TextField>
         </div>
-        <TextField
-          select
-          label="Estado"
-          name="status"
-          value={form.status}
-          onChange={handleChange}
-          fullWidth
-        >
-          <MenuItem value="pending">Pendiente</MenuItem>
-          <MenuItem value="confirmed">Confirmada</MenuItem>
-          <MenuItem value="cancelled">Cancelada</MenuItem>
-        </TextField>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={handleSubmit} variant="contained" color="primary">
@@ -119,5 +145,6 @@ export default function AppointmentForm({ open, onClose, onSave, initialData }) 
         </Button>
       </DialogActions>
     </Dialog>
+
   );
 }

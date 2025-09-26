@@ -10,8 +10,8 @@ export default function Pagination({ page, totalPages, onChange }) {
         onClick={() => onChange(page - 1)}
         disabled={page === 1}
         className={`w-8 h-8 flex items-center justify-center rounded-md border text-sm 
-          ${page === 1 
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+          ${page === 1
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
             : "bg-white text-gray-600 hover:bg-gray-100 border-gray-300"}
         `}
       >
@@ -38,8 +38,8 @@ export default function Pagination({ page, totalPages, onChange }) {
         onClick={() => onChange(page + 1)}
         disabled={page === totalPages}
         className={`w-8 h-8 flex items-center justify-center rounded-md border text-sm 
-          ${page === totalPages 
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+          ${page === totalPages
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
             : "bg-white text-gray-600 hover:bg-gray-100 border-gray-300"}
         `}
       >

@@ -25,14 +25,14 @@ export default function CalendarToolbar({
 
   return (
     <div
-      className={`flex items-center justify-between px-2 py-5 border-t ${
+      className={`flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-2 py-3 border-t ${
         darkMode
           ? "bg-[#181818] border-gray-800 text-gray-100"
           : "bg-gray-50 border-gray-200 text-gray-800"
       }`}
     >
       {/* Left controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         <button
           className={iconBtn}
           onClick={onPrev}
@@ -45,7 +45,7 @@ export default function CalendarToolbar({
         <button className={chipBtn} type="button" aria-label="Current date">
           <CalendarMonth fontSize="small" />
           <span className="text-sm font-medium">
-            {currentDate.toLocaleDateString("en-US", {
+            {currentDate.toLocaleDateString("es-MX", {
               month: "long",
               day: "numeric",
               year: "numeric",
@@ -65,30 +65,19 @@ export default function CalendarToolbar({
 
       {/* Center text */}
       <div
-        className={`text-sm ${
+        className={`flex justify-center text-sm ${
           darkMode ? "text-gray-200" : "text-gray-700"
         }`}
       >
         <span
-          className={`font-bold text-3xl ${
+          className={`font-bold text-2xl sm:text-3xl ${
             darkMode ? "text-white" : "text-black"
           }`}
         >
           {totalToday}
-        </span>{" "}
-        appointments today
-      </div>
-
-      {/* Right controls */}
-      <div className="flex items-center gap-2">
-        <button className={chipBtn} type="button">
-          <Tune fontSize="small" />
-          <span className="text-sm">Filter</span>
-        </button>
-
-        <button className={iconBtn} type="button" aria-label="Settings">
-          <Settings fontSize="small" />
-        </button>
+        </span>
+        <span className="ml-2 hidden sm:inline">citas hoy</span>
+        <span className="ml-2 sm:hidden">hoy</span>
       </div>
     </div>
   );
