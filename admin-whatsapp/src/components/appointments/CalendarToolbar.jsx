@@ -2,8 +2,6 @@ import {
   CalendarMonth,
   ChevronLeft,
   ChevronRight,
-  Tune,
-  Settings,
 } from "@mui/icons-material";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -25,10 +23,10 @@ export default function CalendarToolbar({
 
   return (
     <div
-      className={`flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-2 py-3 border-t ${
+      className={`flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-2 py-3  ${
         darkMode
-          ? "bg-[#181818] border-gray-800 text-gray-100"
-          : "bg-gray-50 border-gray-200 text-gray-800"
+          ? "bg-[#1f1f1f] border-gray-800 text-gray-100"
+          : "bg-white border-gray-200 text-gray-800"
       }`}
     >
       {/* Left controls */}

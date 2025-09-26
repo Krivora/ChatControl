@@ -11,7 +11,7 @@ export const AppointmentsApi = {
       time_end: timeEnd,
     }),
   update: (id, payload) => api.put(`/appointments/${id}`, payload),
-  cancel: (id) => api.put(`/appointments/${id}`, { status: "cancelled" }),
+  cancel: (id, payload) => api.put(`/appointments/${id}`, payload),
   remove: (id) => api.delete(`/appointments/${id}`),
   dates: () => api.get("/appointments/dates/all"),
 };

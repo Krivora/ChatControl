@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Edit, FreeCancellation } from "@mui/icons-material";
+import { Edit, EventBusy, CheckCircle } from "@mui/icons-material";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppointments } from "../../hooks/useAppointments";
 import { formatDayAndDate, formatTime } from "../../utils/dateUtils";
@@ -15,7 +15,6 @@ export default function AppointmentsList() {
   const { appointments, loading, error, reload } = useAppointments();
   const { showConfirm, showSnack } = useAlert();
   const [editAppt, setEditAppt] = useState(null);
-  const [openCreate, setOpenCreate] = useState(false);
   const { darkMode } = useTheme();
 
   // 🔸 Estados de filtros y paginación
@@ -73,7 +72,27 @@ export default function AppointmentsList() {
     }).then(async (res) => {
       if (res.isConfirmed) {
         try {
-          await AppointmentsApi.cancel(appt.id);
+          await AppointmentsApi.cancel(appt.id, { ...appt, status: "cancelled" });
+          showSnack("Cita cancelada");
+          reload();
+        } catch {
+          showSnack("Error al cancelar", "error");
+        }
+      }
+    });
+  };
+
+  const handleConfirm = (appt) => {
+    showConfirm({
+      title: "Confirmar cita",
+      text: `¿Seguro que quieres confirmar la cita de ${appt.customer_name}?`,
+      icon: "question",
+      confirmText: "Sí, confirmar",
+      cancelText: "No",
+    }).then(async (res) => {
+      if (res.isConfirmed) {
+        try {
+          await AppointmentsApi.cancel(appt.id, { ...appt, status: "cancelled" });
           showSnack("Cita cancelada");
           reload();
         } catch {
@@ -85,7 +104,8 @@ export default function AppointmentsList() {
 
   const handleSave = async (data) => {
     try {
-      await AppointmentsApi.update(editAppt.id, data);
+      const updated = { ...editAppt, ...data }; // mezcla campos nuevos con existentes
+      await AppointmentsApi.update(editAppt.id, updated);
       showSnack("Cita actualizada");
       setEditAppt(null);
       reload();
@@ -93,6 +113,7 @@ export default function AppointmentsList() {
       showSnack("Error al guardar cita", "error");
     }
   };
+
 
   return (
     <div className={`overflow-x-auto ${container}`}>
@@ -184,16 +205,32 @@ export default function AppointmentsList() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        className={actionBtn}
-                        onClick={() => handleCancel(appt)}
+                        onClick={() => handleConfirm(appt)}
+                        disabled={appt.status === "confirmed"}
+                        className={`${actionBtn} ${
+                          appt.status === "confirmed"
+                            ? "opacity-50 cursor-not-allowed" // 👈 estilo deshabilitado
+                            : ""
+                        }`}
                       >
-                        <FreeCancellation fontSize="small" />
+                        <CheckCircle fontSize="medium" />
+                      </button>
+                      <button
+                        onClick={() => handleCancel(appt)}
+                        disabled={appt.status === "cancelled"}
+                        className={`${actionBtn} ${
+                          appt.status === "cancelled"
+                            ? "opacity-50 cursor-not-allowed" // 👈 estilo deshabilitado
+                            : ""
+                        }`}
+                      >
+                        <EventBusy fontSize="medium" />
                       </button>
                       <button
                         className={actionBtn}
                         onClick={() => setEditAppt(appt)}
                       >
-                        <Edit fontSize="small" />
+                        <Edit fontSize="medium" />
                       </button>
                     </div>
                   </td>
@@ -242,18 +279,24 @@ export default function AppointmentsList() {
                 <p className={textStrong}>{appt.customer_name}</p>
                 <p className={textMuted}>{formatPhone(appt.whatsapp_id)}</p>
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-3">
+                  <button
+                    className={actionBtn}
+                    onClick={() => handleConfirm(appt)}
+                  >
+                    <CheckCircle fontSize="medium" />
+                  </button>
                   <button
                     className={actionBtn}
                     onClick={() => handleCancel(appt)}
                   >
-                    <FreeCancellation fontSize="small" />
+                    <EventBusy fontSize="medium" />
                   </button>
                   <button
                     className={actionBtn}
                     onClick={() => setEditAppt(appt)}
                   >
-                    <Edit fontSize="small" />
+                    <Edit fontSize="medium" />
                   </button>
                 </div>
               </div>
@@ -266,14 +309,6 @@ export default function AppointmentsList() {
         page={page}
         totalPages={totalPages}
         onChange={(newPage) => setPage(newPage)}
-      />
-
-      {/* Formularios */}
-      <AppointmentForm
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        onSave={handleSave}
-        initialData={null}
       />
       <AppointmentForm
         open={!!editAppt}

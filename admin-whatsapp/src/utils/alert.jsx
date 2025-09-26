@@ -25,6 +25,7 @@ export function AlertProvider({ children }) {
       text,
       icon,
       showCancelButton: true,
+      reverseButtons: true,
       confirmButtonText: confirmText,
       cancelButtonText: cancelText,
     });
