@@ -26,6 +26,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const menuItems = [
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
+    { id: "assignment", label: "Asignacion", icon: <FaRegUserCircle />, path: "/assignments" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
     { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
     { id: "configuration", label: "Configuración", icon: <FaCog />, path: "/configuration" },

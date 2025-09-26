@@ -16,8 +16,17 @@ export const AssignmentsService = {
   },
 
   async create(req) {
-    return AssignmentsRepo.create(req.body);
+    try {
+      return await AssignmentsRepo.create(req.body);
+    } catch (err) {
+      if (err.message === "DUPLICATE_ASSIGNMENT") {
+        throw new ApiError(400, "Este usuario ya está asignado a la conversación");
+      }
+      throw err;
+    }
   },
+
+
 
   async update(req) {
     const { id } = req.params;

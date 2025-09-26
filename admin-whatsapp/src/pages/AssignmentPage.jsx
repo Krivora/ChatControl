@@ -1,38 +1,55 @@
-import { useEffect } from "react";
-
+import { useState, useEffect } from "react";
+import { useTheme } from "../context/ThemeContext";
+import AssignmentTable from "../components/Assignment/AssignmentTable";
 
 export default function AssignmentPage() {
-  const { assignments, fetchAssignments } = useAssignments();
+  const [assignments, setAssignments] = useState([]);
+  const { darkMode } = useTheme();
+
+  // Traer clientes asignados desde la API
+  const fetchAssignments = async () => {
+    try {
+      const res = await fetch("/api/clients-assigned"); // 👉 Ajusta la ruta a tu API
+      const data = await res.json();
+      setAssignments(data); // data debería venir con: id, customer_name, answers, etc.
+    } catch (err) {
+      console.error("Error cargando asignaciones", err);
+    }
+  };
+
+  const updateAssignment = async (id, ponderacion) => {
+    try {
+      await fetch(`/api/assignments/${id}`, {
+        method: "PATCH", // o PUT según tu API
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ponderacion }),
+      });
+
+      // Actualizar localmente
+      setAssignments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ponderacion } : a))
+      );
+    } catch (err) {
+      console.error("Error actualizando ponderación", err);
+    }
+  };
 
   useEffect(() => {
-    fetchAssignments(); // O pasar conversationId si quieres filtrar por conversación
+    fetchAssignments();
   }, []);
 
   return (
-    <div className="p-5">
-      <h1 className="text-xl font-bold mb-4">Clientes Asignados</h1>
-      {assignments.length === 0 ? (
-        <p className="opacity-70">No hay asignaciones registradas</p>
-      ) : (
-        <div className="bg-white shadow rounded-lg p-4">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="p-2">Cliente</th>
-                <th className="p-2">Usuario</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.map((a) => (
-                <tr key={a.id} className="border-b">
-                  <td className="p-2">{a.customer_name || a.cliente}</td>
-                  <td className="p-2">{a.user_name || a.usuario}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <div
+      className={`p-6 min-h-screen transition-colors duration-300 ${
+        darkMode ? "bg-[#1f1f1f] text-white" : "bg-gray-50 text-gray-900"
+      }`}
+    >
+      <h1 className="text-2xl font-bold mb-6">Clientes Asignados</h1>
+      <AssignmentTable
+        assignments={assignments}
+        onUpdatePonderacion={updateAssignment}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
