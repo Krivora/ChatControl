@@ -3,21 +3,20 @@ import { useWhatsApp } from "../../hooks/useWhatsapp";
 import { UsersApi } from "../../api/users";
 import { AssignmentsApi } from "../../api/assignments";
 import { useAlert } from "../../utils/alert";
-import { api } from "../../api/client";
 import { MessagesApi } from "../../api/messages";
-
 
 export default function ChatWindow({ chat, darkMode }) {
   const [input, setInput] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [usersMessages, setUsersMessages] = useState([]);
+  const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
   const { sendMessage, loading } = useWhatsApp();
   const { showSnack } = useAlert();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+  }, [chat, messages]);
 
   const formatPhone = (phone) => {
     if (!phone) return "";
@@ -25,7 +24,7 @@ export default function ChatWindow({ chat, darkMode }) {
     return `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 10)}`;
   };
 
-  // Traer usuarios y preparar mensaje de asignación
+  // Traer usuarios
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -33,7 +32,6 @@ export default function ChatWindow({ chat, darkMode }) {
         const allUsers = Array.isArray(res) ? res : res?.data || [];
         const activeUsers = allUsers.filter((u) => !u.deleted_at);
 
-        // Guardamos {id, msg}
         const msgs = activeUsers.map((u) => ({
           id: u.id,
           msg: `${u.nombre} ${u.apellido}, tu asesor, te contactará desde ${formatPhone(
@@ -50,6 +48,22 @@ export default function ChatWindow({ chat, darkMode }) {
     fetchUsers();
   }, []);
 
+  // Traer mensajes de usuario desde backend
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!chat?.conversation?.id) return;
+      try {
+        const res = await MessagesApi.listByConversation(chat.conversation.id);
+        const userMsgs = (res?.data || []).filter((m) => m.sender === "user");
+        setMessages(userMsgs);
+      } catch (err) {
+        console.error("Error al traer mensajes:", err);
+        setMessages([]);
+      }
+    };
+    fetchMessages();
+  }, [chat]);
+
   if (!chat) {
     return (
       <div className="flex flex-1 items-center justify-center text-gray-500 h-full">
@@ -58,16 +72,22 @@ export default function ChatWindow({ chat, darkMode }) {
     );
   }
 
+  // Combinar mensajes: bot + answers + usuario
   const chatEntries = [];
+
+  // Primero ponemos las preguntas del bot y sus answers
   chat.messages
     .filter((m) => m.sender === "bot")
     .forEach((botMsg, index) => {
+      // Pregunta del bot (izquierda)
       chatEntries.push({
         id: `bot-${botMsg.id}`,
         sender: "bot",
         content: botMsg.content,
         created_at: botMsg.created_at,
       });
+
+      // Respuesta asociada (answer) (derecha)
       const answer = chat.answers?.[index];
       if (answer) {
         chatEntries.push({
@@ -79,7 +99,19 @@ export default function ChatWindow({ chat, darkMode }) {
       }
     });
 
+  // Ahora añadimos **todos los mensajes de usuario de la DB** (derecha)
+  messages.forEach((userMsg) => {
+    chatEntries.push({
+      id: `user-${userMsg.id}`,
+      sender: "user",
+      content: userMsg.content,
+      created_at: userMsg.created_at,
+    });
+  });
+
+  // Ordenamos todo por fecha
   chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
 
   const handleSend = async (messageToSend) => {
     if (!messageToSend.trim()) return;
@@ -90,17 +122,16 @@ export default function ChatWindow({ chat, darkMode }) {
       return;
     }
 
-    // 1. Mandar por WhatsApp
     const res = await sendMessage(to, messageToSend);
 
     if (res.ok) {
-      // 2. Guardar en BD con MessagesApi
-      await MessagesApi.create({
+      const saved = await MessagesApi.create({
         conversation_id: chat.conversation?.id,
         content: messageToSend,
         content_type: "text",
       });
 
+      setMessages((prev) => [...prev, saved]);
       setInput("");
       setShowModal(false);
       return true;
@@ -108,60 +139,40 @@ export default function ChatWindow({ chat, darkMode }) {
     return false;
   };
 
-
-  // 🔹 Guardar asignación en DB y mandar mensaje
   const handleAssign = async (userId, message) => {
     try {
-      // 1. Checar si ya existe asignación activa para esta conversación y usuario
       const existing = await AssignmentsApi.listByConversation(chat.conversation?.id);
-
-      const yaAsignado = existing.find(
-        (a) => a.user_id === userId && a.status === "active"
-      );
+      const yaAsignado = existing.find((a) => a.user_id === userId && a.status === "active");
 
       if (yaAsignado) {
-        // 🔹 Mensaje específico antes de salir
         showSnack("⚠️ Este usuario ya está asignado a la conversación.", "warning");
         return;
       }
 
-      // 2. Crear asignación
       await AssignmentsApi.create({
         conversation_id: chat.conversation?.id,
         user_id: userId,
         status: "active",
       });
 
-      // 3. Enviar mensaje
       const ok = await handleSend(message);
-
-      if (ok) {
-        showSnack("Usuario asignado y mensaje enviado 🎉", "success");
-      }
+      if (ok) showSnack("Usuario asignado y mensaje enviado 🎉", "success");
     } catch (err) {
       console.error("Error al asignar:", err);
-
-      // 🔹 Capturar error específico del backend
       const msg =
-        err.message.includes("ya está asignado") // según lo que devuelva tu backend
+        err.message.includes("ya está asignado")
           ? "⚠️ Este usuario ya está asignado a la conversación."
           : "Ocurrió un error al asignar usuario ❌";
-
       showSnack(msg, "error");
     }
   };
-
-
-
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div
         className={`p-4 border-b font-semibold flex-shrink-0 ${
-          darkMode
-            ? "bg-[#1f1f1f] border-gray-700 text-white"
-            : "bg-white border-gray-200 text-gray-900"
+          darkMode ? "bg-[#1f1f1f] border-gray-700 text-white" : "bg-white border-gray-200 text-gray-900"
         }`}
       >
         {chat.customer?.full_name || "Cliente"}
@@ -171,14 +182,12 @@ export default function ChatWindow({ chat, darkMode }) {
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 scrollbar-hidden">
         {chatEntries.map((msg) => {
           const isBot = msg.sender === "bot";
-          const isAnswer = msg.sender === "answer";
+          const isAnswerOrUser = msg.sender === "answer" || msg.sender === "user";
 
           return (
             <div
               key={msg.id}
-              className={`flex ${
-                isAnswer ? "justify-start" : "justify-end"
-              }`}
+              className={`flex ${isAnswerOrUser ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${
@@ -203,7 +212,7 @@ export default function ChatWindow({ chat, darkMode }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input y botón dinámico */}
+      {/* Input y botón */}
       <div
         className={`p-3 flex gap-2 border-t flex-shrink-0 ${
           darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"
@@ -220,7 +229,6 @@ export default function ChatWindow({ chat, darkMode }) {
             darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
           }`}
         />
-
         {input.trim() ? (
           <button
             onClick={() => handleSend(input)}
@@ -240,23 +248,20 @@ export default function ChatWindow({ chat, darkMode }) {
         )}
       </div>
 
-      {/* Modal de selección */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
           <div className="bg-white dark:bg-[#2a2a2a] rounded-xl w-96 shadow-lg flex flex-col max-h-[80vh]">
-            {/* Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Selecciona un usuario
               </h3>
             </div>
-
-            {/* Lista scrollable */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {usersMessages.length > 0 ? (
-                usersMessages.map((u, i) => (
+                usersMessages.map((u) => (
                   <button
-                    key={i}
+                    key={u.id}
                     onClick={() => handleAssign(u.id, u.msg)}
                     className="w-full px-4 py-2 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] text-left whitespace-normal break-words shadow-sm"
                   >
@@ -264,13 +269,9 @@ export default function ChatWindow({ chat, darkMode }) {
                   </button>
                 ))
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  No hay usuarios disponibles.
-                </p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No hay usuarios disponibles.</p>
               )}
             </div>
-
-            {/* Footer */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
               <button
                 onClick={() => setShowModal(false)}
