@@ -81,32 +81,32 @@ export default function ChatWindow({ chat, darkMode }) {
 
   chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-const handleSend = async (messageToSend) => {
-  if (!messageToSend.trim()) return;
+  const handleSend = async (messageToSend) => {
+    if (!messageToSend.trim()) return;
 
-  const to = chat.customer?.whatsapp_id;
-  if (!to) {
-    alert("Este cliente no tiene número de WhatsApp registrado");
-    return;
-  }
+    const to = chat.customer?.whatsapp_id;
+    if (!to) {
+      alert("Este cliente no tiene número de WhatsApp registrado");
+      return;
+    }
 
-  // 1. Mandar por WhatsApp
-  const res = await sendMessage(to, messageToSend);
+    // 1. Mandar por WhatsApp
+    const res = await sendMessage(to, messageToSend);
 
-  if (res.ok) {
-    // 2. Guardar en BD con MessagesApi
-    await MessagesApi.create({
-      conversation_id: chat.conversation?.id,
-      content: messageToSend,
-      content_type: "text",
-    });
+    if (res.ok) {
+      // 2. Guardar en BD con MessagesApi
+      await MessagesApi.create({
+        conversation_id: chat.conversation?.id,
+        content: messageToSend,
+        content_type: "text",
+      });
 
-    setInput("");
-    setShowModal(false);
-    return true;
-  }
-  return false;
-};
+      setInput("");
+      setShowModal(false);
+      return true;
+    }
+    return false;
+  };
 
 
   // 🔹 Guardar asignación en DB y mandar mensaje
@@ -120,7 +120,8 @@ const handleSend = async (messageToSend) => {
       );
 
       if (yaAsignado) {
-        showSnack("Este usuario ya está asignado a la conversación ⚠️", "warning");
+        // 🔹 Mensaje específico antes de salir
+        showSnack("⚠️ Este usuario ya está asignado a la conversación.", "warning");
         return;
       }
 
@@ -139,9 +140,17 @@ const handleSend = async (messageToSend) => {
       }
     } catch (err) {
       console.error("Error al asignar:", err);
-      showSnack("Ocurrió un error al asignar usuario ❌", "error");
+
+      // 🔹 Capturar error específico del backend
+      const msg =
+        err.message.includes("ya está asignado") // según lo que devuelva tu backend
+          ? "⚠️ Este usuario ya está asignado a la conversación."
+          : "Ocurrió un error al asignar usuario ❌";
+
+      showSnack(msg, "error");
     }
   };
+
 
 
 
