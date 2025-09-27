@@ -3,6 +3,9 @@ import { useWhatsApp } from "../../hooks/useWhatsapp";
 import { UsersApi } from "../../api/users";
 import { AssignmentsApi } from "../../api/assignments";
 import { useAlert } from "../../utils/alert";
+import { api } from "../../api/client";
+import { MessagesApi } from "../../api/messages";
+
 
 export default function ChatWindow({ chat, darkMode }) {
   const [input, setInput] = useState("");
@@ -78,23 +81,33 @@ export default function ChatWindow({ chat, darkMode }) {
 
   chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-  const handleSend = async (messageToSend) => {
-    if (!messageToSend.trim()) return;
+const handleSend = async (messageToSend) => {
+  if (!messageToSend.trim()) return;
 
-    const to = chat.customer?.whatsapp_id;
-    if (!to) {
-      alert("Este cliente no tiene número de WhatsApp registrado");
-      return;
-    }
+  const to = chat.customer?.whatsapp_id;
+  if (!to) {
+    alert("Este cliente no tiene número de WhatsApp registrado");
+    return;
+  }
 
-    const res = await sendMessage(to, messageToSend);
-    if (res.ok) {
-      setInput("");
-      setShowModal(false);
-      return true;
-    }
-    return false;
-  };
+  // 1. Mandar por WhatsApp
+  const res = await sendMessage(to, messageToSend);
+
+  if (res.ok) {
+    // 2. Guardar en BD con MessagesApi
+    await MessagesApi.create({
+      conversation_id: chat.conversation?.id,
+      content: messageToSend,
+      content_type: "text",
+    });
+
+    setInput("");
+    setShowModal(false);
+    return true;
+  }
+  return false;
+};
+
 
   // 🔹 Guardar asignación en DB y mandar mensaje
   const handleAssign = async (userId, message) => {

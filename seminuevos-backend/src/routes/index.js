@@ -5,6 +5,7 @@ import appointments from './appointments.routes.js';
 import assignments from './assignments.routes.js';
 import customers from './customers.routes.js';
 import conversations from './conversations.routes.js';
+import messagesRoutes from "./messages.routes.js";
 
 import slots from './slots.routes.js';
 import users from './users.routes.js';
