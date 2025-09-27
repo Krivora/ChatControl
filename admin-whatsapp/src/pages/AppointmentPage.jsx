@@ -1,8 +1,7 @@
 import { useTheme } from "../context/ThemeContext"; 
 import { List, CalendarMonth } from "@mui/icons-material";
 import { useState } from "react";
-import AppointmentsCalendar from "../components/appointments/AppointmentsCalendar";
-import AppointmentsList from "../components/appointments/AppointmentsList";
+import { AppointmentCalendar, AppointmentsList } from "../components/appointments";
 
 export default function AppointmentsPage() {
   const { darkMode } = useTheme();
@@ -62,7 +61,7 @@ export default function AppointmentsPage() {
 
       {/* Cambiar entre Calendar y List */}
       {view === "calendar" ? (
-        <AppointmentsCalendar />
+        <AppointmentCalendar />
       ) : (
         <AppointmentsList />
       )}

@@ -18,6 +18,16 @@ export default function AppointmentForm({ open, onClose, onSave, initialData }) 
     time_end: "",
     status: "pending",
   });
+  const APPOINTMENT_STATUSES = [
+    { value: "pending", label: "Pendiente" },
+    { value: "confirmed", label: "Confirmada" },
+    { value: "in_progress", label: "En curso" },
+    { value: "completed", label: "Completada" },
+    { value: "rescheduled", label: "Reprogramada" },
+    { value: "cancelled", label: "Cancelada" },
+    { value: "no_show", label: "No asistió" },
+  ];
+
 
   useEffect(() => {
     if (initialData) {
@@ -119,6 +129,23 @@ export default function AppointmentForm({ open, onClose, onSave, initialData }) 
               fullWidth
             />
           </div>
+          <TextField
+            select
+            label="Estado"
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            variant="outlined"
+            size="small"
+            fullWidth
+          >
+            {APPOINTMENT_STATUSES.map((status) => (
+              <MenuItem key={status.value} value={status.value}>
+                {status.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </div>
       </DialogContent>
 
