@@ -1,4 +1,3 @@
-// src/repositories/messages.repo.js
 import { pool } from "../config/db.js";
 
 export const MessagesRepo = {
@@ -11,5 +10,17 @@ export const MessagesRepo = {
     const values = [conversation_id, sender, content, content_type];
     const { rows } = await pool.query(query, values);
     return rows[0];
+  },
+
+  // Nuevo método para listar mensajes por conversación
+  async listByConversation(conversationId) {
+    const query = `
+      SELECT *
+      FROM messages
+      WHERE conversation_id = $1
+      ORDER BY created_at ASC;
+    `;
+    const { rows } = await pool.query(query, [conversationId]);
+    return rows;
   },
 };
