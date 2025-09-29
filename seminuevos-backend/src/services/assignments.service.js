@@ -39,9 +39,7 @@ export const AssignmentsService = {
   },
 
 async listAll() {
-  console.log("📌 AssignmentsService.listAll: llamando al repo");
   const result = await AssignmentsRepo.listAll();
-  console.log("📌 AssignmentsService.listAll: resultado del repo", result);
   return result;
 },
 

@@ -6,8 +6,6 @@ export const AssignmentsApi = {
     const res = await api.get("/assignments", {
       headers: { "Cache-Control": "no-cache" },
     });
-    console.log("📌 API res.data:", res.data); // debug
-    // Devuelve el array directamente si ya es un array
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
 
