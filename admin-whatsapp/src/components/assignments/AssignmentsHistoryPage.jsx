@@ -6,7 +6,7 @@ import { AssignmentsApi } from "../api/assignments";
 import { useAlert } from "../utils/alert";
 import Pagination from "../components/common/TablePagination";
 
-export default function AssignmentPage() {
+export default function AssignmentsHistoryPage() {
   const { darkMode } = useTheme();
   const { showSnack } = useAlert();
 
@@ -14,13 +14,13 @@ export default function AssignmentPage() {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editAssignment, setEditAssignment] = useState(null);
-  const [activeTab, setActiveTab] = useState("active");
+  const [activeTab, setActiveTab] = useState("history"); // directamente historial
 
-  // Estados de asignaciones
-  const ACTIVE_STATUSES = ["Aprobado", "Vendido", "En proceso"];
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const HISTORY_STATUSES = ["Rechazado", "Aprobado No Concretado"];
 
-  // Fetch inicial
   useEffect(() => {
     fetchAssignments();
   }, []);
@@ -31,7 +31,7 @@ export default function AssignmentPage() {
       const data = await AssignmentsApi.list();
       setAssignments(data);
     } catch (err) {
-      console.error(err);
+      console.error("Error cargando asignaciones", err);
     } finally {
       setLoading(false);
     }
@@ -42,11 +42,13 @@ export default function AssignmentPage() {
     setOpenDialog(true);
   };
 
-  const handleSubmit = async (id, status) => {
+  const handleSubmit = async (assignmentId, status) => {
     try {
-      if (id) {
-        const updated = await AssignmentsApi.update(id, { status_assignment: status });
-        setAssignments(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a));
+      if (assignmentId) {
+        const updated = await AssignmentsApi.update(assignmentId, { status_assignment: status });
+        setAssignments(prev =>
+          prev.map(a => (a.id === assignmentId ? { ...a, ...updated } : a))
+        );
         showSnack("Asignación actualizada", "success");
       } else {
         const created = await AssignmentsApi.create({ conversation_id: 1, user_id: 1, status: "active" });
@@ -59,43 +61,32 @@ export default function AssignmentPage() {
     }
   };
 
-  // Filtrado por pestaña
+  // Filtrado para histórico
   const filteredAssignments = useMemo(() => {
-    return assignments.filter(a => {
-      return activeTab === "active"
-        ? ACTIVE_STATUSES.includes(a.status_assignment)
-        : HISTORY_STATUSES.includes(a.status_assignment);
-    });
-  }, [assignments, activeTab]);
+    return assignments.filter(a => HISTORY_STATUSES.includes(a.status_assignment));
+  }, [assignments]);
+
+  const totalPages = Math.ceil(filteredAssignments.length / rowsPerPage);
+  const paginatedAssignments = filteredAssignments.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage
+  );
 
   return (
     <div className={`p-6 h-[calc(100vh-120px)] ${darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"}`}>
-      <h1 className="text-2xl font-semibold mb-4">Asignaciones</h1>
+      <h1 className="text-2xl font-semibold mb-4">Histórico de Asignaciones</h1>
 
-      {/* Tabs */}
-      <div className="flex border-b mb-4">
-        <button
-          onClick={() => setActiveTab("active")}
-          className={`px-4 py-2 text-sm font-medium ${activeTab === "active" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          Activas
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`px-4 py-2 text-sm font-medium ${activeTab === "history" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          Historial
-        </button>
-      </div>
-
-      {/* Tabla con búsqueda y paginación interna */}
+      {/* Tabla con buscador y paginación */}
       <AssignmentTableFull
-        assignments={filteredAssignments}
+        assignments={paginatedAssignments}
         loading={loading}
         onEdit={handleEdit}
       />
 
-      {/* Dialogo de status */}
+      {/* Paginación */}
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      {/* Diálogo de status */}
       <StatusFormDialog
         open={openDialog}
         assignment={editAssignment}
