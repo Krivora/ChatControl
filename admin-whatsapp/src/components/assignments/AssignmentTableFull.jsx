@@ -16,8 +16,8 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit 
     return (assignments || []).filter(a => {
       const status = a?.status_assignment || "";
       const user = a?.customer_name || "";
-      const conv = a?.conversation_id || "";
-      const fullData = `${status} ${user} ${conv}`.toLowerCase();
+      // Quitamos conversation_id del filtro
+      const fullData = `${status} ${user}`.toLowerCase();
       return fullData.includes(search.toLowerCase());
     });
   }, [assignments, search]);
@@ -38,7 +38,6 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit 
         <table className="w-full border-collapse text-left text-sm">
           <thead className={`text-xs font-semibold uppercase ${darkMode ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-50 text-gray-500"}`}>
             <tr>
-              <th className="px-6 py-3">Conversación</th>
               <th className="px-6 py-3">Cliente</th>
               <th className="px-6 py-3">Estado</th>
               <th className="px-6 py-3 text-right">Acciones</th>
@@ -47,7 +46,6 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit 
           <tbody>
             {Array.from({ length: 5 }).map((_, i) => (
               <tr key={i} className="border-t">
-                <td className="px-6 py-4"><Skeleton variant="text" width={100} animation="wave" /></td>
                 <td className="px-6 py-4"><Skeleton variant="text" width={160} animation="wave" /></td>
                 <td className="px-6 py-4"><Skeleton variant="text" width={80} animation="wave" /></td>
                 <td className="px-6 py-4 text-right"><Skeleton variant="circular" width={28} height={28} animation="wave" /></td>
@@ -76,7 +74,6 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit 
       <table className="w-full border-collapse text-left text-sm">
         <thead className={`text-xs font-semibold uppercase ${darkMode ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-50 text-gray-500"}`}>
           <tr>
-            <th className="px-6 py-3">Conversación</th>
             <th className="px-6 py-3">Cliente</th>
             <th className="px-6 py-3">Estado</th>
             <th className="px-6 py-3 text-right">Acciones</th>
@@ -85,7 +82,6 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit 
         <tbody className={`divide-y ${darkMode ? "divide-gray-700 bg-[#1a1a1a]" : "divide-gray-200 bg-white"}`}>
           {paginatedAssignments.map(a => (
             <tr key={a.id} className={`hover:${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"}`}>
-              <td className={`px-6 py-4 font-medium ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{a.conversation_id || "-"}</td>
               <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{a.customer_name || "Sin cliente"}</td>
               <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>{a.status_assignment || "-"}</td>
               <td className="px-6 py-4 text-right">
