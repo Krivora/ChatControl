@@ -1,29 +1,64 @@
-// src/controllers/assignments.controller.js
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { AssignmentsService } from '../services/assignments.service.js';
-import { ok } from '../utils/ApiResponse.js';
+import { AssignmentsService } from "../services/assignments.service.js";
 
-export const listAssignments = asyncHandler(async (req, res) => {
-  const items = await AssignmentsService.list(req);
-  return ok(res, items);
-});
+export async function listAllAssignments(req, res) {
+  try {
+    console.log("📌 listAllAssignments: entrando al controller");
+    const data = await AssignmentsService.listAll();
+    console.log("📌 listAllAssignments: data obtenida", data);
+    res.json({ data });
+  } catch (err) {
+    console.error("❌ Error en listAllAssignments:", err);
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
 
-export const getAssignment = asyncHandler(async (req, res) => {
-  const assignment = await AssignmentsService.get(req);
-  return ok(res, assignment);
-});
 
-export const createAssignment = asyncHandler(async (req, res) => {
-  const assignment = await AssignmentsService.create(req);
-  return ok(res, assignment);
-});
+export async function listAssignments(req, res) {
+  try {
+    const data = await AssignmentsService.list(req);
+    res.json({ data });
+  } catch (err) {
+    console.error("Error listAssignments:", err);
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
 
-export const updateAssignment = asyncHandler(async (req, res) => {
-  const assignment = await AssignmentsService.update(req);
-  return ok(res, assignment);
-});
+export async function getAssignment(req, res) {
+  try {
+    const data = await AssignmentsService.get(req);
+    res.json({ data });
+  } catch (err) {
+    console.error("Error getAssignment:", err);
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
 
-export const deleteAssignment = asyncHandler(async (req, res) => {
-  const result = await AssignmentsService.remove(req);
-  return ok(res, result);
-});
+export async function createAssignment(req, res) {
+  try {
+    const data = await AssignmentsService.create(req);
+    res.status(201).json({ data });
+  } catch (err) {
+    console.error("Error createAssignment:", err);
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
+
+export async function updateAssignment(req, res) {
+  try {
+    const data = await AssignmentsService.update(req);
+    res.json({ data });
+  } catch (err) {
+    console.error("Error updateAssignment:", err);
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}
+
+export async function deleteAssignment(req, res) {
+  try {
+    const data = await AssignmentsService.remove(req);
+    res.json({ data });
+  } catch (err) {
+    console.error("Error deleteAssignment:", err);
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+}

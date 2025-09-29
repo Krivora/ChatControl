@@ -2,7 +2,7 @@
 import { pool } from "../config/db.js";
 
 export const ConversationsRepo = {
-  // Lista de conversaciones con último mensaje y sus respuestas
+  // Lista de conversaciones con último mensaje, respuestas y SOLO sin asignar
   async listWithLastMessage({ limit = 20, offset = 0 }) {
     const query = `
       SELECT c.id,
@@ -31,13 +31,16 @@ export const ConversationsRepo = {
       FROM conversations c
       LEFT JOIN customers cu ON cu.id = c.customer_id
       LEFT JOIN answers a ON a.conversation_id = c.id
+      LEFT JOIN assignments asg
+             ON asg.conversation_id = c.id
+            AND asg.status = 'active'
+      WHERE asg.id IS NULL -- 👈 SOLO sin asignar
       GROUP BY c.id, cu.full_name
       ORDER BY last_message_time DESC NULLS LAST
       LIMIT $1 OFFSET $2
     `;
 
     const result = await pool.query(query, [limit, offset]);
-    // conv.answers viene como string JSON, así que parseamos
     return result.rows.map(r => ({
       ...r,
       answers: Array.isArray(r.answers) ? r.answers : JSON.parse(r.answers),
@@ -45,7 +48,15 @@ export const ConversationsRepo = {
   },
 
   async count() {
-    const result = await pool.query("SELECT COUNT(*) FROM conversations");
+    // contar SOLO las sin asignar también
+    const result = await pool.query(`
+      SELECT COUNT(*) 
+      FROM conversations c
+      LEFT JOIN assignments asg
+             ON asg.conversation_id = c.id
+            AND asg.status = 'active'
+      WHERE asg.id IS NULL
+    `);
     return parseInt(result.rows[0].count, 10);
   },
 
@@ -69,7 +80,7 @@ export const ConversationsRepo = {
       [conversationId]
     );
 
-    // Traer customer real desde la tabla customers
+    // Customer
     const customerRes = await pool.query(
       `SELECT id, full_name, whatsapp_id
        FROM customers
@@ -79,7 +90,7 @@ export const ConversationsRepo = {
 
     const customer = customerRes.rows[0] || null;
 
-    // Ponderación básica (opcional)
+    // Ponderación (ejemplo simple)
     const score = Math.min(100, answersRes.rowCount * 20);
     const ponderacion = {
       score,
@@ -93,7 +104,11 @@ export const ConversationsRepo = {
       customer,
       conversation: {
         id: conversationId,
-        status: (await pool.query(`SELECT status FROM conversations WHERE id=$1`, [conversationId])).rows[0]?.status ?? null,
+        status: (
+          await pool.query(`SELECT status FROM conversations WHERE id=$1`, [
+            conversationId,
+          ])
+        ).rows[0]?.status ?? null,
       },
       messages: messagesRes.rows,
       answers: answersRes.rows,
