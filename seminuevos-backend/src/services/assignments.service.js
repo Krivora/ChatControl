@@ -1,4 +1,3 @@
-// src/services/assignments.service.js
 import { AssignmentsRepo } from '../repositories/assignments.repo.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -25,9 +24,7 @@ export const AssignmentsService = {
       throw err;
     }
   },
-
-
-
+  
   async update(req) {
     const { id } = req.params;
     const updated = await AssignmentsRepo.update(id, req.body);
@@ -39,5 +36,15 @@ export const AssignmentsService = {
     const { id } = req.params;
     await AssignmentsRepo.delete(id);
     return { success: true };
-  }
+  },
+
+async listAll() {
+  console.log("📌 AssignmentsService.listAll: llamando al repo");
+  const result = await AssignmentsRepo.listAll();
+  console.log("📌 AssignmentsService.listAll: resultado del repo", result);
+  return result;
+},
+
+
+
 };
