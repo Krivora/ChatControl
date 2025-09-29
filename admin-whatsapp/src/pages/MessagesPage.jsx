@@ -3,36 +3,35 @@ import { useLocation } from "react-router-dom";
 import ConversationList from "../components/messages/ConversationList";
 import ChatWindow from "../components/messages/ChatWindow";
 import CustomerInfo from "../components/messages/CustomerInfo";
-
-import { useConversations } from "../hooks/useConversations";
-import { useConversationDetail } from "../hooks/useConversationDetail";
 import { useTheme } from "../context/ThemeContext";
+import { useConversationWithPolling } from "../hooks/useConversationsWithPolling";
 
 export default function MessagesPage() {
-  const { conversations, selectedId, selectConversation } = useConversations();
-  const { chat, loading } = useConversationDetail(selectedId);
+  const [selectedId, setSelectedId] = useState(null);
   const { darkMode } = useTheme();
-  const location = useLocation(); // 👈 necesario para leer state del navigate
+  const location = useLocation();
+  
+  // Hook que trae conversaciones + chat + messages en polling
+  const { conversations, chat, messages } = useConversationWithPolling(selectedId);
 
   const [mobileView, setMobileView] = useState("list"); // "list" | "chat" | "info"
 
-  // 👈 efecto para seleccionar conversación al llegar desde Dashboard
+  // Seleccionar conversación si venimos de Dashboard
   useEffect(() => {
     if (location.state?.conversationId) {
-      selectConversation(location.state.conversationId);
+      setSelectedId(location.state.conversationId);
       if (window.innerWidth < 640) setMobileView("chat");
     }
-  }, [location.state, selectConversation]);
+  }, [location.state]);
 
   const handleSelectConversation = (id) => {
-    selectConversation(id);
-    if (window.innerWidth < 640) {
-      setMobileView("chat");
-    }
+    setSelectedId(id);
+    if (window.innerWidth < 640) setMobileView("chat");
   };
 
   return (
     <div className={`flex h-[calc(100vh-120px)] overflow-hidden ${darkMode ? "bg-[#121212]" : "bg-gray-100"}`}>
+      
       {/* Desktop / Tablet */}
       <div className="hidden sm:flex flex-1">
         <div className="flex-shrink-0" style={{ width: 300 }}>
@@ -43,15 +42,19 @@ export default function MessagesPage() {
             darkMode={darkMode}
           />
         </div>
+
         <div className="flex-1 min-w-0">
-          {loading ? (
-            <div className="flex h-full items-center justify-center text-gray-500">Cargando...</div>
+          {selectedId ? (
+            <ChatWindow chat={chat} messages={messages} darkMode={darkMode} />
           ) : (
-            <ChatWindow chat={chat} darkMode={darkMode} />
+            <div className="flex h-full items-center justify-center text-gray-500">
+              Selecciona una conversación
+            </div>
           )}
         </div>
+
         <div className="flex-shrink-0" style={{ width: 240 }}>
-          <CustomerInfo chat={chat} darkMode={darkMode} />
+          {selectedId && chat && <CustomerInfo chat={chat} messages={messages} darkMode={darkMode} />}
         </div>
       </div>
 
@@ -76,10 +79,12 @@ export default function MessagesPage() {
                 <span className="text-lg">←</span> Conversaciones
               </button>
             </div>
-            {loading ? (
-              <div className="flex h-full items-center justify-center text-gray-500">Cargando...</div>
+            {selectedId ? (
+              <ChatWindow chat={chat} messages={messages} darkMode={darkMode} />
             ) : (
-              <ChatWindow chat={chat} darkMode={darkMode} />
+              <div className="flex h-full items-center justify-center text-gray-500">
+                Selecciona una conversación
+              </div>
             )}
             <div className="p-3 border-t flex justify-center bg-white">
               <button
@@ -102,7 +107,13 @@ export default function MessagesPage() {
                 ← Volver
               </button>
             </div>
-            <CustomerInfo chat={chat} darkMode={darkMode} />
+            {selectedId && chat ? (
+              <CustomerInfo chat={chat} messages={messages} darkMode={darkMode} />
+            ) : (
+              <div className="flex h-full items-center justify-center text-gray-500">
+                Cargando información...
+              </div>
+            )}
           </div>
         )}
       </div>
