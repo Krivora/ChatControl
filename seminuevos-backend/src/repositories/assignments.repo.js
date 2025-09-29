@@ -54,9 +54,9 @@ export const AssignmentsRepo = {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO assignments (conversation_id, user_id, status, assigned_at)
-       VALUES ($1, $2, 'active', NOW())
-       RETURNING *`,
+      `INSERT INTO assignments (conversation_id, user_id, status, status_assignment, assigned_at)
+      VALUES ($1, $2, 'active', 'En proceso', NOW())
+      RETURNING *`,
       [conversation_id, user_id]
     );
 

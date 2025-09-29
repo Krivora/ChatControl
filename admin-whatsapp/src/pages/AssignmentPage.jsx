@@ -17,8 +17,8 @@ export default function AssignmentPage() {
   const [activeTab, setActiveTab] = useState("active");
 
   // Estados de asignaciones
-  const ACTIVE_STATUSES = ["Aprobado", "Vendido", "En proceso"];
-  const HISTORY_STATUSES = ["Rechazado", "Aprobado No Concretado"];
+  const ACTIVE_STATUSES = ["En proceso"];
+  const HISTORY_STATUSES = ["Rechazado", "Aprobado No Concretado", "Aprobado", "Vendido"];
 
   // Fetch inicial
   useEffect(() => {
