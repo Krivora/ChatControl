@@ -16,7 +16,7 @@ const DAY_HEADER_FORMAT = { weekday: "short", day: "numeric" };
 
 export default function AppointmentsCalendar() {
   const { darkMode } = useTheme();
-  const { appointments, loading, error } = useAppointments();
+  const { appointments,setAppointments, loading, error, reload } = useAppointments();
   const calendarRef = useRef(null);
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -56,19 +56,24 @@ export default function AppointmentsCalendar() {
 
 
   const handleSave = useCallback(
-  async (data) => {
-    try {
-      const updated = { ...editAppt, ...data };
-      await AppointmentsApi.update(editAppt.id, updated);
-      showSnack("Cita actualizada");
-      setEditAppt(null);
-      // Opcional: recargar citas si tienes función reload
-    } catch {
-      showSnack("Error al guardar cita", "error");
-    }
-  },
-  [editAppt, showSnack]
-);
+    async (data) => {
+      try {
+        const updated = { ...editAppt, ...data };
+        await AppointmentsApi.update(editAppt.id, updated);
+        showSnack("Cita actualizada");
+        setEditAppt(null);
+        // Actualiza solo el evento editado en el estado local
+        setAppointments((prev) =>
+          prev.map((appt) =>
+            appt.id === updated.id ? { ...appt, ...updated } : appt
+          )
+        );
+      } catch {
+        showSnack("Error al guardar cita", "error");
+      }
+    },
+    [editAppt, showSnack, setAppointments]
+  );
 
   // 🎨 Colores por estado (dark/light)
   const STATUS_LABELS = useMemo(() => {

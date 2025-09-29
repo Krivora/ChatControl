@@ -79,6 +79,7 @@
     "flatted": "^3.3.3",
     "forwarded": "^0.2.0",
     "fraction.js": "^4.3.7",
+    "framer-motion": "^12.23.22",
     "fresh": "^2.0.0",
     "function-bind": "^1.1.2",
     "gensync": "^1.0.0-beta.2",

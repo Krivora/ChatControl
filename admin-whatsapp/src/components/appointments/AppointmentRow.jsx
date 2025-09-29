@@ -2,6 +2,7 @@ import { Edit, EventBusy, CheckCircle, CheckCircleOutline } from "@mui/icons-mat
 import { formatDayAndDate, formatTime } from "../../utils/dateUtils";
 import { formatPhone } from "../../utils/phoneUtils";
 
+
 export default function AppointmentRow({ appt, statusLabels, textBase, textStrong, textMuted, rowHover, actionBtn, onEdit, onCancel, onConfirm, onComplete }) {
   const statusInfo = statusLabels[appt.status?.toLowerCase()] || { text: appt.status, classes: "bg-gray-100 text-gray-500" };
   const { dayName, fullDate } = formatDayAndDate(appt.date);

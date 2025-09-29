@@ -10,6 +10,8 @@ import Pagination from "../common/TablePagination";
 import AppointmentRow from "./AppointmentRow";
 import AppointmentCard from "./AppointmentCard";
 import { useDebounce } from "../../hooks/useDebounce";
+import { AnimatePresence, motion } from "framer-motion";
+
 
 // 🎨 Etiquetas de estados
 const STATUS_LABELS = {
@@ -26,7 +28,7 @@ const ACTIVE_STATUSES = ["pending", "confirmed", "in_progress", "rescheduled"];
 const HISTORY_STATUSES = ["completed", "cancelled", "no_show"];
 
 export default function AppointmentsList() {
-  const { appointments, loading, error, reload } = useAppointments();
+  const { appointments,setAppointments, loading, error, reload } = useAppointments();
   const { showConfirm, showSnack } = useAlert();
   const { darkMode } = useTheme();
 
@@ -133,12 +135,17 @@ export default function AppointmentsList() {
         await AppointmentsApi.update(editAppt.id, updated);
         showSnack("Cita actualizada");
         setEditAppt(null);
-        reload();
+        // Actualiza solo el evento editado en el estado local
+        setAppointments((prev) =>
+          prev.map((appt) =>
+            appt.id === updated.id ? { ...appt, ...updated } : appt
+          )
+        );
       } catch {
         showSnack("Error al guardar cita", "error");
       }
     },
-    [editAppt, reload, showSnack]
+    [editAppt, showSnack, setAppointments]
   );
 
   // === Render ===
@@ -252,6 +259,7 @@ export default function AppointmentsList() {
               </td>
             </tr>
           )}
+          
 
           {!loading &&
             paginatedAppointments.data.map((appt) => (
