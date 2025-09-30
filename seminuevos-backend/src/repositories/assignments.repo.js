@@ -5,19 +5,25 @@ export const AssignmentsRepo = {
   async listAll() {
     const { rows } = await pool.query(`
       SELECT
-        a.id,
-        a.conversation_id,
-        a.user_id,
-        a.status,
-        a.status_assignment,
-        a.assigned_at,
-        cu.full_name AS customer_name,
-        cu.whatsapp_id
-      FROM assignments a
-      LEFT JOIN conversations c ON c.id = a.conversation_id
-      LEFT JOIN customers cu ON cu.id = c.customer_id
-      WHERE a.status = 'active'
-      ORDER BY a.assigned_at DESC
+  a.id,
+  a.conversation_id,
+  a.user_id,
+  a.status,
+  a.status_assignment,
+  a.assigned_at,
+  cu.full_name AS customer_name,
+  cu.whatsapp_id,
+  COALESCE(json_agg(
+    json_build_object('id', ans.id, 'question_key', ans.question_key, 'answer_value', ans.answer_value)
+    ) FILTER (WHERE ans.id IS NOT NULL), '[]') AS answers
+FROM assignments a
+LEFT JOIN conversations c ON c.id = a.conversation_id
+LEFT JOIN customers cu ON cu.id = c.customer_id
+LEFT JOIN answers ans ON ans.conversation_id = c.id
+WHERE a.status = 'active'
+GROUP BY a.id, cu.full_name, cu.whatsapp_id
+ORDER BY a.assigned_at DESC
+
     `);
     return rows;
   },

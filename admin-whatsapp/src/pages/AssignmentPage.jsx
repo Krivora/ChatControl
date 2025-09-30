@@ -13,13 +13,13 @@ export default function AssignmentPage() {
   const { darkMode } = useTheme();
   const { showSnack } = useAlert();
 
-  const [setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // ✅ Aquí lo defines
   const [openDialog, setOpenDialog] = useState(false);
   const [editAssignment, setEditAssignment] = useState(null);
   const [activeTab, setActiveTab] = useState("active");
 
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const { assignments, setAssignments, loading, reload } = useAssignments();
+  const { assignments, setAssignments, reload } = useAssignments();
 
   // Estados de asignaciones
   const ACTIVE_STATUSES = ["En proceso"];
