@@ -7,7 +7,7 @@ import { Skeleton } from "@mui/material";
 
 export default function AssignmentTableFull({ assignments = [], loading, onEdit }) {
   const { darkMode } = useTheme();
-
+ 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);

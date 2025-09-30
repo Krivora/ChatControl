@@ -1,22 +1,30 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import ConversationList from "../components/messages/ConversationList";
 import ChatWindow from "../components/messages/ChatWindow";
 import CustomerInfo from "../components/messages/CustomerInfo";
 import { useTheme } from "../context/ThemeContext";
-import { useConversationWithPolling } from "../hooks/useConversationsWithPolling";
+import { useConversations } from "../hooks/useConversations";
+import { useConversationDetail } from "../hooks/useConversationsMessages";
 
 export default function MessagesPage() {
   const [selectedId, setSelectedId] = useState(null);
   const { darkMode } = useTheme();
   const location = useLocation();
-  
-  // Hook que trae conversaciones + chat + messages en polling
-  const { conversations, chat, messages } = useConversationWithPolling(selectedId);
+
+  // 🔹 Lista de conversaciones (se actualiza cada 10s)
+  const { conversations, loading: loadingConvs } = useConversations();
+
+  // 🔹 Detalle de conversación seleccionada (info + mensajes)
+  const {
+    conversation: chat,
+    messages,
+    loading: loadingChat,
+  } = useConversationDetail(selectedId);
 
   const [mobileView, setMobileView] = useState("list"); // "list" | "chat" | "info"
 
-  // Seleccionar conversación si venimos de Dashboard
+  // 🧭 Si vienes desde Dashboard con un conversationId
   useEffect(() => {
     if (location.state?.conversationId) {
       setSelectedId(location.state.conversationId);
@@ -30,22 +38,33 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className={`flex h-[calc(100vh-120px)] overflow-hidden ${darkMode ? "bg-[#121212]" : "bg-gray-100"}`}>
-      
-      {/* Desktop / Tablet */}
+    <div
+      className={`flex h-[calc(100vh-120px)] overflow-hidden ${
+        darkMode ? "bg-[#121212]" : "bg-gray-100"
+      }`}
+    >
+      {/* 🖥️ Desktop / Tablet */}
       <div className="hidden sm:flex flex-1">
+        {/* Lista de conversaciones */}
         <div className="flex-shrink-0" style={{ width: 300 }}>
           <ConversationList
             conversations={conversations}
+            loading={loadingConvs}
             onSelect={handleSelectConversation}
             selectedId={selectedId}
             darkMode={darkMode}
           />
         </div>
 
+        {/* Ventana de chat */}
         <div className="flex-1 min-w-0">
           {selectedId ? (
-            <ChatWindow chat={chat} messages={messages} darkMode={darkMode} />
+            <ChatWindow
+              chat={chat}
+              messages={messages}
+              loading={loadingChat}
+              darkMode={darkMode}
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-gray-500">
               Selecciona una conversación
@@ -53,16 +72,24 @@ export default function MessagesPage() {
           )}
         </div>
 
+        {/* Información del cliente */}
         <div className="flex-shrink-0" style={{ width: 240 }}>
-          {selectedId && chat && <CustomerInfo chat={chat} messages={messages} darkMode={darkMode} />}
+          {selectedId && chat && (
+            <CustomerInfo
+              chat={chat}
+              messages={messages}
+              darkMode={darkMode}
+            />
+          )}
         </div>
       </div>
 
-      {/* Mobile */}
+      {/* 📱 Mobile */}
       <div className="flex-1 sm:hidden relative">
         {mobileView === "list" && (
           <ConversationList
             conversations={conversations}
+            loading={loadingConvs}
             onSelect={handleSelectConversation}
             selectedId={selectedId}
             darkMode={darkMode}
@@ -80,7 +107,12 @@ export default function MessagesPage() {
               </button>
             </div>
             {selectedId ? (
-              <ChatWindow chat={chat} messages={messages} darkMode={darkMode} />
+              <ChatWindow
+                chat={chat}
+                messages={messages}
+                loading={loadingChat}
+                darkMode={darkMode}
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-gray-500">
                 Selecciona una conversación
@@ -108,7 +140,11 @@ export default function MessagesPage() {
               </button>
             </div>
             {selectedId && chat ? (
-              <CustomerInfo chat={chat} messages={messages} darkMode={darkMode} />
+              <CustomerInfo
+                chat={chat}
+                messages={messages}
+                darkMode={darkMode}
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-gray-500">
                 Cargando información...

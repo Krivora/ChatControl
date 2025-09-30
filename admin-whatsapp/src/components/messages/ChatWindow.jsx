@@ -1,30 +1,49 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWhatsApp } from "../../hooks/useWhatsapp";
 import { UsersApi } from "../../api/users";
 import { AssignmentsApi } from "../../api/assignments";
 import { useAlert } from "../../utils/alert";
 import { MessagesApi } from "../../api/messages";
 
-export default function ChatWindow({ chat, darkMode }) {
+export default function ChatWindow({ chat, messages = [], darkMode }) {
   const [input, setInput] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [usersMessages, setUsersMessages] = useState([]);
-  const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
   const { sendMessage, loading } = useWhatsApp();
   const { showSnack } = useAlert();
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat, messages]);
+  const firstLoad = useRef(true);
 
+  // 🧭 Scroll inteligente: solo baja si el usuario está al final
+  useEffect(() => {
+    const container = messagesEndRef.current?.parentElement;
+    if (!container) return;
+
+    const isAtBottom =
+      Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 50;
+
+    if (isAtBottom || firstLoad.current) {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: firstLoad.current ? "auto" : "smooth",
+      });
+      firstLoad.current = false;
+    }
+  }, [messages]);
+
+  // 🔁 Cada vez que cambie de conversación, resetea el scroll
+  useEffect(() => {
+    firstLoad.current = true;
+  }, [chat?.conversation?.id]);
+
+  // 📞 Formato de teléfono
   const formatPhone = (phone) => {
     if (!phone) return "";
     const s = phone.toString();
     return `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 10)}`;
   };
 
-  // Traer usuarios
+  // 👥 Cargar lista de usuarios para el modal "Asignar"
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -48,22 +67,6 @@ export default function ChatWindow({ chat, darkMode }) {
     fetchUsers();
   }, []);
 
-  // Traer mensajes de usuario desde backend
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!chat?.conversation?.id) return;
-      try {
-        const res = await MessagesApi.listByConversation(chat.conversation.id);
-        const userMsgs = (res?.data || []).filter((m) => m.sender === "user");
-        setMessages(userMsgs);
-      } catch (err) {
-        console.error("Error al traer mensajes:", err);
-        setMessages([]);
-      }
-    };
-    fetchMessages();
-  }, [chat]);
-
   if (!chat) {
     return (
       <div className="flex flex-1 items-center justify-center text-gray-500 h-full">
@@ -72,14 +75,26 @@ export default function ChatWindow({ chat, darkMode }) {
     );
   }
 
-  // Combinar mensajes: bot + answers + usuario
+  // 🧩 Construcción de mensajes unificada
   const chatEntries = [];
 
-  // Primero ponemos las preguntas del bot y sus answers
-  chat.messages
+  // 1️⃣ Primer mensaje del cliente (solo si existe y es el primero cronológicamente)
+  const customerMessages = (chat?.messages || []).filter((m) => m.sender === "customer");
+  if (customerMessages.length > 0) {
+    const firstMsg = customerMessages[0];
+    chatEntries.push({
+      id: `cust-${firstMsg.id}`,
+      sender: "customer",
+      content: firstMsg.content,
+      created_at: firstMsg.created_at,
+    });
+  }
+
+  // 2️⃣ Mensajes del bot + respuestas correspondientes (answers)
+  (chat?.messages || [])
     .filter((m) => m.sender === "bot")
-    .forEach((botMsg, index) => {
-      // Pregunta del bot (izquierda)
+    .forEach((botMsg, i) => {
+      // Mensaje del bot
       chatEntries.push({
         id: `bot-${botMsg.id}`,
         sender: "bot",
@@ -87,32 +102,41 @@ export default function ChatWindow({ chat, darkMode }) {
         created_at: botMsg.created_at,
       });
 
-      // Respuesta asociada (answer) (derecha)
-      const answer = chat.answers?.[index];
-      if (answer) {
+      // Respuesta (solo si existe y no está repetida)
+      const answer = chat.answers?.[i];
+      if (answer && !customerMessages.some((m) => m.id === answer.id)) {
         chatEntries.push({
           id: `ans-${answer.id}`,
-          sender: "answer",
+          sender: "user",
           content: answer.answer_value,
           created_at: answer.created_at,
         });
       }
     });
 
-  // Ahora añadimos **todos los mensajes de usuario de la DB** (derecha)
-  messages.forEach((userMsg) => {
-    chatEntries.push({
-      id: `user-${userMsg.id}`,
-      sender: "user",
-      content: userMsg.content,
-      created_at: userMsg.created_at,
-    });
+  // 3️⃣ Agregar mensajes nuevos del socket (en tiempo real)
+  (messages || []).forEach((m) => {
+    const exists = chatEntries.some((x) => x.id === m.id || x.content === m.content);
+    if (!exists) {
+      chatEntries.push({
+        id: m.id,
+        sender: m.sender,
+        content: m.content,
+        created_at: m.created_at,
+      });
+    }
   });
 
-  // Ordenamos todo por fecha
-  chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
+  // ❗️Eliminar duplicados (por si el mensaje ya existe)
+  const uniqueEntries = Array.from(
+    new Map(chatEntries.map((m) => [m.id, m])).values()
+  );
 
+  // 🕒 Ordenar por fecha
+  uniqueEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  // ✉️ Enviar mensaje manual
   const handleSend = async (messageToSend) => {
     if (!messageToSend.trim()) return;
 
@@ -123,22 +147,19 @@ export default function ChatWindow({ chat, darkMode }) {
     }
 
     const res = await sendMessage(to, messageToSend);
-
     if (res.ok) {
-      const saved = await MessagesApi.create({
+      await MessagesApi.create({
         conversation_id: chat.conversation?.id,
         content: messageToSend,
         content_type: "text",
       });
 
-      setMessages((prev) => [...prev, saved]);
       setInput("");
       setShowModal(false);
-      return true;
     }
-    return false;
   };
 
+  // 👤 Asignar usuario + enviar mensaje
   const handleAssign = async (userId, message) => {
     try {
       const existing = await AssignmentsApi.listByConversation(chat.conversation?.id);
@@ -159,44 +180,43 @@ export default function ChatWindow({ chat, darkMode }) {
       if (ok) showSnack("Usuario asignado y mensaje enviado 🎉", "success");
     } catch (err) {
       console.error("Error al asignar:", err);
-      const msg =
-        err.message.includes("ya está asignado")
-          ? "⚠️ Este usuario ya está asignado a la conversación."
-          : "Ocurrió un error al asignar usuario ❌";
-      showSnack(msg, "error");
+      showSnack("Ocurrió un error al asignar usuario ❌", "error");
     }
   };
 
+  // 🎨 Render principal
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div
-        className={`p-4 border-b font-semibold flex-shrink-0 ${
-          darkMode ? "bg-[#1f1f1f] border-gray-700 text-white" : "bg-white border-gray-200 text-gray-900"
-        }`}
+        className={`p-4 border-b font-semibold flex-shrink-0 ${darkMode
+          ? "bg-[#1f1f1f] border-gray-700 text-white"
+          : "bg-white border-gray-200 text-gray-900"
+          }`}
       >
         {chat.customer?.full_name || "Cliente"}
       </div>
-
       {/* Mensajes */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 scrollbar-hidden">
-        {chatEntries.map((msg) => {
-          const isBot = msg.sender === "bot";
-          const isAnswerOrUser = msg.sender === "answer" || msg.sender === "user";
+        {uniqueEntries.map((msg) => {
+          const sender = msg.sender;
+          const justify = sender === "bot" ? "justify-end" : "justify-start";
+
+          const bubbleClass =
+            sender === "bot"
+              ? "bg-[#960b2b] text-white rounded-br-none"
+              : sender === "user"
+                ? "bg-gray-300 text-gray-900 rounded-bl-none"
+                : sender === "customer"
+                  ? "bg-gray-200 text-gray-900 rounded-bl-none"
+                  : darkMode
+                    ? "bg-[#2a2a2a] text-white rounded-bl-none"
+                    : "bg-gray-200 text-gray-900 rounded-bl-none";
 
           return (
-            <div
-              key={msg.id}
-              className={`flex ${isAnswerOrUser ? "justify-end" : "justify-start"}`}
-            >
+            <div key={msg.id} className={`flex ${justify}`}>
               <div
-                className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${
-                  isBot
-                    ? "bg-[#960b2b] text-white rounded-br-none"
-                    : darkMode
-                    ? "bg-[#2a2a2a] text-white rounded-bl-none"
-                    : "bg-gray-200 text-gray-900 rounded-bl-none"
-                }`}
+                className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${bubbleClass}`}
               >
                 <p className="whitespace-pre-line">{msg.content}</p>
                 <span className="text-[11px] opacity-70 block mt-1 text-right">
@@ -209,15 +229,16 @@ export default function ChatWindow({ chat, darkMode }) {
             </div>
           );
         })}
+
+
+        {/* Ancla para el scroll */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input y botón */}
+      {/* Input */}
       <div
-        className={`p-3 flex gap-2 border-t flex-shrink-0 ${
-          darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"
-        }`}
-        style={{ minHeight: 56 }}
+        className={`p-3 flex gap-2 border-t flex-shrink-0 ${darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"
+          }`}
       >
         <input
           type="text"
@@ -225,9 +246,8 @@ export default function ChatWindow({ chat, darkMode }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={loading}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${
-            darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
-          }`}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
+            }`}
         />
         {input.trim() ? (
           <button
@@ -248,7 +268,7 @@ export default function ChatWindow({ chat, darkMode }) {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal de asignación */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
           <div className="bg-white dark:bg-[#2a2a2a] rounded-xl w-96 shadow-lg flex flex-col max-h-[80vh]">
@@ -269,7 +289,9 @@ export default function ChatWindow({ chat, darkMode }) {
                   </button>
                 ))
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No hay usuarios disponibles.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  No hay usuarios disponibles.
+                </p>
               )}
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
