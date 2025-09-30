@@ -5,16 +5,21 @@ import StatusFormDialog from "../components/assignments/StatusFormDialog";
 import { AssignmentsApi } from "../api/assignments";
 import { useAlert } from "../utils/alert";
 import Pagination from "../components/common/TablePagination";
+import ChatWindow from "../components/messages/ChatWindow";
+import { getConversationDetail } from "../api/conversations";
+import { useAssignments } from "../hooks/useAssignments";
 
 export default function AssignmentPage() {
   const { darkMode } = useTheme();
   const { showSnack } = useAlert();
 
-  const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editAssignment, setEditAssignment] = useState(null);
   const [activeTab, setActiveTab] = useState("active");
+
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const { assignments, setAssignments, loading, reload } = useAssignments();
 
   // Estados de asignaciones
   const ACTIVE_STATUSES = ["En proceso"];
@@ -68,6 +73,18 @@ export default function AssignmentPage() {
     });
   }, [assignments, activeTab]);
 
+  // Abrir chat
+  const handleOpenChat = async (assignment) => {
+    if (!assignment.conversation_id) return;
+
+    try {
+      const conversation = await getConversationDetail(assignment.conversation_id);
+      setSelectedConversation(conversation);
+    } catch (err) {
+      showSnack("Error al cargar la conversación", "error");
+    }
+  };
+
   return (
     <div className={`p-6 h-[calc(100vh-120px)] ${darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"}`}>
       <h1 className="text-2xl font-semibold mb-4">Asignaciones</h1>
@@ -93,6 +110,7 @@ export default function AssignmentPage() {
         assignments={filteredAssignments}
         loading={loading}
         onEdit={handleEdit}
+        onOpenChat={handleOpenChat} // ✅ Agregamos la acción de chat
       />
 
       {/* Dialogo de status */}
@@ -102,6 +120,23 @@ export default function AssignmentPage() {
         onClose={() => setOpenDialog(false)}
         onSubmit={handleSubmit}
       />
+
+      {/* Chat Modal */}
+      {selectedConversation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="w-[600px] h-[80vh] bg-white dark:bg-[#1f1f1f] rounded-xl shadow-lg flex flex-col">
+            <ChatWindow chat={selectedConversation} darkMode={darkMode} />
+            <div className="p-2 flex justify-end border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setSelectedConversation(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

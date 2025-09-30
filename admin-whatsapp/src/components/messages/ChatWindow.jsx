@@ -13,6 +13,7 @@ export default function ChatWindow({ chat, darkMode }) {
   const messagesEndRef = useRef(null);
   const { sendMessage, loading } = useWhatsApp();
   const { showSnack } = useAlert();
+  const [activeAssignments, setActiveAssignments] = useState([]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,6 +48,21 @@ export default function ChatWindow({ chat, darkMode }) {
     };
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (!chat?.conversation?.id) return;
+      try {
+        const existing = await AssignmentsApi.listByConversation(chat.conversation.id);
+        const active = existing.filter(a => a.status === "active");
+        setActiveAssignments(active);
+      } catch (err) {
+        console.error("Error al traer asignaciones:", err);
+        setActiveAssignments([]);
+      }
+    };
+    fetchAssignments();
+  }, [chat]);
 
   // Traer mensajes de usuario desde backend
   useEffect(() => {
@@ -237,6 +253,14 @@ export default function ChatWindow({ chat, darkMode }) {
           >
             {loading ? "Enviando..." : "Enviar"}
           </button>
+        ) : activeAssignments.length > 0 ? (
+          <button
+            onClick={() => handleSend("")} // Solo para mostrar botón de enviar si quieres
+            disabled={loading}
+            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
+          >
+            Enviar
+          </button>
         ) : (
           <button
             onClick={() => setShowModal(true)}
@@ -246,6 +270,7 @@ export default function ChatWindow({ chat, darkMode }) {
             Asignar
           </button>
         )}
+
       </div>
 
       {/* Modal */}

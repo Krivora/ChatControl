@@ -9,9 +9,10 @@ export const AssignmentsRepo = {
         a.conversation_id,
         a.user_id,
         a.status,
-        a.status_assignment,   
+        a.status_assignment,
         a.assigned_at,
-        cu.full_name AS customer_name
+        cu.full_name AS customer_name,
+        cu.whatsapp_id
       FROM assignments a
       LEFT JOIN conversations c ON c.id = a.conversation_id
       LEFT JOIN customers cu ON cu.id = c.customer_id
@@ -21,7 +22,7 @@ export const AssignmentsRepo = {
     return rows;
   },
 
-  // Listar asignaciones por conversación
+  // Listar asignaciones por conversación con teléfono
   async listByConversation(conversationId) {
     const { rows } = await pool.query(`
       SELECT
@@ -29,9 +30,10 @@ export const AssignmentsRepo = {
         a.conversation_id,
         a.user_id,
         a.status,
-        a.status_assignment,   
+        a.status_assignment,
         a.assigned_at,
-        cu.full_name AS customer_name
+        cu.full_name AS customer_name,
+        cu.whatsapp_id
       FROM assignments a
       LEFT JOIN conversations c ON c.id = a.conversation_id
       LEFT JOIN customers cu ON cu.id = c.customer_id
