@@ -2,26 +2,36 @@ import { pool } from "../config/db.js";
 
 export const AssignmentsRepo = {
   // Listar todas las asignaciones activas con nombre del cliente
-  async listAll() {
-    const { rows } = await pool.query(`
-      SELECT
-        a.id,
-        a.conversation_id,
-        a.user_id,
-        a.status,
-        a.status_assignment,   
-        a.assigned_at,
-        cu.full_name AS customer_name
-      FROM assignments a
-      LEFT JOIN conversations c ON c.id = a.conversation_id
-      LEFT JOIN customers cu ON cu.id = c.customer_id
-      WHERE a.status = 'active'
-      ORDER BY a.assigned_at DESC
-    `);
-    return rows;
-  },
+async listAll() {
+  const { rows } = await pool.query(`
+    SELECT
+      a.id,
+      a.conversation_id,
+      a.user_id,
+      u.nombre AS user_nombre,
+      u.apellido AS user_apellido,
+      a.status,
+      a.status_assignment,
+      a.assigned_at,
+      cu.full_name AS customer_name,
+      cu.whatsapp_id,
+      COALESCE(json_agg(
+        json_build_object('id', ans.id, 'question_key', ans.question_key, 'answer_value', ans.answer_value)
+      ) FILTER (WHERE ans.id IS NOT NULL), '[]') AS answers
+    FROM assignments a
+    LEFT JOIN conversations c ON c.id = a.conversation_id
+    LEFT JOIN customers cu ON cu.id = c.customer_id
+    LEFT JOIN answers ans ON ans.conversation_id = c.id
+    LEFT JOIN users u ON u.id = a.user_id
+    WHERE a.status = 'active'
+    GROUP BY a.id, cu.full_name, cu.whatsapp_id, u.id
+    ORDER BY a.assigned_at DESC
+  `);
+  return rows;
+},
 
-  // Listar asignaciones por conversación
+
+  // Listar asignaciones por conversación con teléfono
   async listByConversation(conversationId) {
     const { rows } = await pool.query(`
       SELECT
@@ -29,9 +39,10 @@ export const AssignmentsRepo = {
         a.conversation_id,
         a.user_id,
         a.status,
-        a.status_assignment,   
+        a.status_assignment,
         a.assigned_at,
-        cu.full_name AS customer_name
+        cu.full_name AS customer_name,
+        cu.whatsapp_id
       FROM assignments a
       LEFT JOIN conversations c ON c.id = a.conversation_id
       LEFT JOIN customers cu ON cu.id = c.customer_id

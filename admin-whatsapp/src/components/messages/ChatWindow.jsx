@@ -67,6 +67,21 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (!chat?.conversation?.id) return;
+      try {
+        const existing = await AssignmentsApi.listByConversation(chat.conversation.id);
+        const active = existing.filter(a => a.status === "active");
+        setActiveAssignments(active);
+      } catch (err) {
+        console.error("Error al traer asignaciones:", err);
+        setActiveAssignments([]);
+      }
+    };
+    fetchAssignments();
+  }, [chat]);
+
   if (!chat) {
     return (
       <div className="flex flex-1 items-center justify-center text-gray-500 h-full">
@@ -257,6 +272,14 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
           >
             {loading ? "Enviando..." : "Enviar"}
           </button>
+        ) : activeAssignments.length > 0 ? (
+          <button
+            onClick={() => handleSend("")} // Solo para mostrar botón de enviar si quieres
+            disabled={loading}
+            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
+          >
+            Enviar
+          </button>
         ) : (
           <button
             onClick={() => setShowModal(true)}
@@ -266,6 +289,7 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
             Asignar
           </button>
         )}
+
       </div>
 
       {/* Modal de asignación */}
