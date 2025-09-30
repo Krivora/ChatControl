@@ -93,7 +93,7 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
             <th className="px-6 py-3">Teléfono</th>
             <th className="px-6 py-3">Estado</th>
             <th className="px-6 py-3 text-center">Score</th>
-            <th className="px-6 py-3">Usuario</th>
+            <th className="px-6 py-3">Asignado</th>
             <th className="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
