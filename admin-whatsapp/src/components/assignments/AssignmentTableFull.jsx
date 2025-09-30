@@ -4,7 +4,7 @@ import { useTheme } from "../../context/ThemeContext";
 import TableFilters from "../common/TableFilters";
 import Pagination from "../common/TablePagination";
 
-// Etiquetas y puntos
+// Mapeos de puntos
 const ponderacionMap = {
   down_payment_max: [
     { label: "$30,000 – $50,000", points: 15 },
@@ -33,7 +33,15 @@ const ponderacionMap = {
   ],
 };
 
-export default function AssignmentTableFull({ assignments = [], loading, onEdit, onOpenChat }) {
+// Rangos de puntaje con color
+const scoreRanges = [
+  { min: 0, max: 50, color: "bg-red-500" },
+  { min: 51, max: 100, color: "bg-yellow-400" },
+  { min: 101, max: 140, color: "bg-green-400" },
+  { min: 141, max: 170, color: "bg-blue-500" },
+];
+
+export default function AssignmentTableFull({ assignments = [], users = [], loading, onEdit, onOpenChat }) {
   const { darkMode } = useTheme();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -48,12 +56,12 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit,
 
   const filteredAssignments = useMemo(() => {
     return (assignments || []).filter(a => {
+      const user = users.find(u => u.id === a.user_id)?.nombre || "";
       const status = a?.status_assignment || "";
-      const user = a?.customer_name || "";
-      const phone = a?.whatsapp_id || "";
-      return `${status} ${user} ${phone}`.toLowerCase().includes(search.toLowerCase());
+      const customer = a?.customer_name || "";
+      return `${status} ${customer} ${user}`.toLowerCase().includes(search.toLowerCase());
     });
-  }, [assignments, search]);
+  }, [assignments, search, users]);
 
   const totalPages = Math.ceil(filteredAssignments.length / rowsPerPage);
   const paginatedAssignments = filteredAssignments.slice(
@@ -84,28 +92,33 @@ export default function AssignmentTableFull({ assignments = [], loading, onEdit,
             <th className="px-6 py-3">Cliente</th>
             <th className="px-6 py-3">Teléfono</th>
             <th className="px-6 py-3">Estado</th>
-            <th className="px-6 py-3">Score</th>
+            <th className="px-6 py-3 text-center">Score</th>
+            <th className="px-6 py-3">Usuario</th>
             <th className="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${darkMode ? "divide-gray-700 bg-[#1a1a1a]" : "divide-gray-200 bg-white"}`}>
           {paginatedAssignments.map(a => {
             const answersDelAssignment = a.answers || [];
-
             const score = answersDelAssignment.reduce((sum, ans) => {
               const options = ponderacionMap[ans.question_key] || [];
               const matched = options.find(opt => opt.label.toLowerCase() === ans.answer_value?.toLowerCase());
               return sum + (matched?.points || 0);
             }, 0);
+            const range = scoreRanges.find(r => score >= r.min && score <= r.max) || {};
+            const user = users.find(u => u.id === a.user_id);
 
             return (
               <tr key={a.id} className={`hover:${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"}`}>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{a.customer_name || "Sin cliente"}</td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{formatPhone(a.whatsapp_id)}</td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-600 px-6 py-4"}>{a.status_assignment || "-"}</td>
-                <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>
-                  <div className="font-medium">{score} / 170 puntos</div>
+                <td className="px-6 py-4 text-center">
+                  <div className="flex items-center justify-center">
+                    <div className={`w-4 h-4 rounded-full ${range.color}`} title={`Score: ${score}`}></div>
+                  </div>
                 </td>
+                <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{a.user_nombre ? `${a.user_nombre} ${a.user_apellido}` : "-"}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     <button onClick={() => onEdit(a)} className={actionBtn}><Edit fontSize="small" /></button>
