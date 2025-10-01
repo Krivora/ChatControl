@@ -114,8 +114,15 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{formatPhone(a.whatsapp_id)}</td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-600 px-6 py-4"}>{a.status_assignment || "-"}</td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-600 px-6 py-4"}>
-                  {score} / 170 pts
+                  <div className="flex items-center gap-x-2">
+                    <span>{score} / 170 pts</span>
+                    <div
+                      className={`w-4 h-4 rounded-full ${range.color}`}
+                      title={range.label}
+                    ></div>
+                  </div>
                 </td>
+
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{a.user_nombre ? `${a.user_nombre} ${a.user_apellido}` : "-"}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
