@@ -36,7 +36,6 @@ export default function MessagesPage() {
     setSelectedId(id);
     if (window.innerWidth < 640) setMobileView("chat");
   };
-
   return (
     <div
       className={`flex h-[calc(100vh-120px)] overflow-hidden ${

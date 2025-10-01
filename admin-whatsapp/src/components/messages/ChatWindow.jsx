@@ -75,60 +75,49 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     );
   }
 
-  // 🧩 Construcción de mensajes sin duplicados
-  const chatEntries = [];
+  let chatEntries = [];
 
-  // 1️⃣ Primer mensaje del cliente (si existe)
-  const customerMessages = (chat?.messages || []).filter((m) => m.sender === "customer");
-  if (customerMessages.length > 0) {
-    const firstMsg = customerMessages[0];
-    chatEntries.push({
-      id: `cust-${firstMsg.id}`,
-      sender: "customer",
-      content: firstMsg.content,
-      created_at: firstMsg.created_at,
-    });
-  }
+  // Paso 1️⃣ - Clonar todos los mensajes originales
+  const messagesa = [...(chat?.messages || [])];
 
-  // 2️⃣ Mensajes del bot + respuesta correspondiente (si hay)
-  (chat?.messages || [])
-    .filter((m) => m.sender === "bot")
-    .forEach((botMsg, i) => {
-      chatEntries.push({
-        id: `bot-${botMsg.id}`,
-        sender: "bot",
-        content: botMsg.content,
-        created_at: botMsg.created_at,
-      });
+  // Paso 2️⃣ - Reemplazar mensajes del cliente (1,2,3, etc.) por los answers reales
+  (chat?.answers || []).forEach((a) => {
+    const answerTime = new Date(a.created_at);
 
-      const answer = chat.answers?.[i];
-      if (answer && !customerMessages.some((m) => m.id === answer.id)) {
-        chatEntries.push({
-          id: `ans-${answer.id}`,
-          sender: "user",
-          content: answer.answer_value,
-          created_at: answer.created_at,
-        });
-      }
-    });
-
-  // 3️⃣ Agregar mensajes nuevos del socket (realtime)
-  (messages || []).forEach((m) => {
-    const exists = chatEntries.some(
-      (x) => x.id === m.id || x.content === m.content
+    // Buscar el mensaje del cliente que corresponde a este answer (por tiempo cercano)
+    const msgIndex = messages.findIndex(
+      (m) =>
+        m.sender === "customer" &&
+        Math.abs(new Date(m.created_at) - answerTime) < 2000 // 2 segundos de tolerancia
     );
-    if (!exists) {
-      chatEntries.push({
-        id: m.id,
-        sender: m.sender,
-        content: m.content,
-        created_at: m.created_at,
+
+    if (msgIndex !== -1) {
+      // Reemplazar el contenido numérico por el texto real del answer
+      messages[msgIndex] = {
+        ...messages[msgIndex],
+        content: a.answer_value,
+      };
+    } else {
+      // Si no existe un message, insertamos uno nuevo basado en el answer
+      messages.push({
+        id: `ans-${a.id}`,
+        sender: "customer",
+        content: a.answer_value,
+        created_at: a.created_at,
       });
     }
   });
 
-  // 4️⃣ Ordenar cronológicamente
-  chatEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Paso 3️⃣ - Ordenar cronológicamente
+  messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  // Paso 4️⃣ - Mapear a la estructura final del chat
+  chatEntries = messages.map((msg) => ({
+    id: `msg-${msg.id}`,
+    sender: msg.sender,
+    content: msg.content,
+    created_at: msg.created_at,
+  }));
 
   // ✉️ Enviar mensaje manual
   const handleSend = async (messageToSend) => {
@@ -183,11 +172,10 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div
-        className={`p-4 border-b font-semibold flex-shrink-0 ${
-          darkMode
-            ? "bg-[#1f1f1f] border-gray-700 text-white"
-            : "bg-white border-gray-200 text-gray-900"
-        }`}
+        className={`p-4 border-b font-semibold flex-shrink-0 ${darkMode
+          ? "bg-[#1f1f1f] border-gray-700 text-white"
+          : "bg-white border-gray-200 text-gray-900"
+          }`}
       >
         {chat.customer?.full_name || "Cliente"}
       </div>
@@ -223,9 +211,8 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
 
       {/* Input */}
       <div
-        className={`p-3 flex gap-2 border-t flex-shrink-0 ${
-          darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"
-        }`}
+        className={`p-3 flex gap-2 border-t flex-shrink-0 ${darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"
+          }`}
       >
         <input
           type="text"
@@ -233,9 +220,8 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={loading}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${
-            darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
-          }`}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
+            }`}
         />
         {input.trim() ? (
           <button

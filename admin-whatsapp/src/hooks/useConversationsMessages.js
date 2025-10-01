@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { getConversationDetail } from "../api/conversations";
 import { MessagesApi } from "../api/messages";
-const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+
 export function useConversationDetail(conversationId) {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -34,30 +34,30 @@ export function useConversationDetail(conversationId) {
   useEffect(() => {
     if (!conversationId) return;
 
-    const socket = io(`${BASE}`); // mismo puerto de tu backend con socket
+    // 🔌 Conecta al backend de sockets (ajusta si usas dominio distinto)
+    const socket = io("http://localhost:4000"); // o tu dominio
     socketRef.current = socket;
 
-    // 🔹 Unirse a la conversación activa
+    // 🔊 Unirse al canal de esta conversación
     socket.emit("join_conversation", conversationId);
 
-    // 🔹 Escuchar nuevos mensajes
+    // 👂 Escuchar nuevos mensajes emitidos por el backend (desde el trigger)
     socket.on("message_created", (newMsg) => {
-      console.log("🆕 Mensaje recibido en tiempo real:", newMsg);
       if (newMsg.conversation_id === conversationId) {
         setMessages((prev) => {
           const exists = prev.some((m) => m.id === newMsg.id);
-          return exists ? prev : [...prev, newMsg];
+          if (exists) return prev;
+          return [...prev, newMsg];
         });
       }
     });
 
-    // 🔹 Cleanup
+    // 🚪 Limpiar al salir de la conversación
     return () => {
       socket.emit("leave_conversation", conversationId);
       socket.disconnect();
     };
   }, [conversationId]);
-
 
   return {
     conversation,
