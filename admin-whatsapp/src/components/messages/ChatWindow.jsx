@@ -4,6 +4,7 @@ import { UsersApi } from "../../api/users";
 import { AssignmentsApi } from "../../api/assignments";
 import { useAlert } from "../../utils/alert";
 import { MessagesApi } from "../../api/messages";
+import { useAuth } from "../../context/AuthContext";
 
 export default function ChatWindow({ chat, messages = [], darkMode }) {
   const [input, setInput] = useState("");
@@ -12,10 +13,11 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
   const messagesEndRef = useRef(null);
   const { sendMessage, loading } = useWhatsApp();
   const { showSnack } = useAlert();
-
   const firstLoad = useRef(true);
+  const { user } = useAuth();
 
-  // 🧭 Scroll automático (baja solo si el usuario está al final)
+  const canAssign = user?.role === "admin" || user?.role === "super_admin";
+
   useEffect(() => {
     const container = messagesEndRef.current?.parentElement;
     if (!container) return;
@@ -30,20 +32,16 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
       firstLoad.current = false;
     }
   }, [messages]);
-
-  // 🔁 Cuando cambia de conversación, resetea el scroll
   useEffect(() => {
     firstLoad.current = true;
   }, [chat?.conversation?.id]);
 
-  // 📞 Formato de teléfono
   const formatPhone = (phone) => {
     if (!phone) return "";
     const s = phone.toString();
     return `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 10)}`;
   };
 
-  // 👥 Cargar lista de usuarios para asignar
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -76,29 +74,22 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
   }
 
   let chatEntries = [];
-
-  // Paso 1️⃣ - Clonar todos los mensajes originales
   const messagesa = [...(chat?.messages || [])];
 
-  // Paso 2️⃣ - Reemplazar mensajes del cliente (1,2,3, etc.) por los answers reales
   (chat?.answers || []).forEach((a) => {
     const answerTime = new Date(a.created_at);
-
-    // Buscar el mensaje del cliente que corresponde a este answer (por tiempo cercano)
     const msgIndex = messages.findIndex(
       (m) =>
         m.sender === "customer" &&
-        Math.abs(new Date(m.created_at) - answerTime) < 2000 // 2 segundos de tolerancia
+        Math.abs(new Date(m.created_at) - answerTime) < 2000
     );
 
     if (msgIndex !== -1) {
-      // Reemplazar el contenido numérico por el texto real del answer
       messages[msgIndex] = {
         ...messages[msgIndex],
         content: a.answer_value,
       };
     } else {
-      // Si no existe un message, insertamos uno nuevo basado en el answer
       messages.push({
         id: `ans-${a.id}`,
         sender: "customer",
@@ -108,18 +99,13 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     }
   });
 
-  // Paso 3️⃣ - Ordenar cronológicamente
   messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-  // Paso 4️⃣ - Mapear a la estructura final del chat
   chatEntries = messages.map((msg) => ({
     id: `msg-${msg.id}`,
     sender: msg.sender,
     content: msg.content,
     created_at: msg.created_at,
   }));
-
-  // ✉️ Enviar mensaje manual
   const handleSend = async (messageToSend) => {
     if (!messageToSend.trim()) return;
 
@@ -142,7 +128,6 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     }
   };
 
-  // 👤 Asignar usuario + enviar mensaje
   const handleAssign = async (userId, message) => {
     try {
       const existing = await AssignmentsApi.listByConversation(chat.conversation?.id);
@@ -167,7 +152,6 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     }
   };
 
-  // 🎨 Render
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
@@ -224,14 +208,15 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
             }`}
         />
         {input.trim() ? (
-          <button
-            onClick={() => handleSend(input)}
-            disabled={loading}
-            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
-          >
-            {loading ? "Enviando..." : "Enviar"}
-          </button>
-        ) : (
+        <button
+          onClick={() => handleSend(input)}
+          disabled={loading}
+          className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
+        >
+          {loading ? "Enviando..." : "Enviar"}
+        </button>
+      ) : (
+        canAssign && ( // 👈 solo muestra si cumple con el rol
           <button
             onClick={() => setShowModal(true)}
             disabled={loading}
@@ -239,7 +224,8 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
           >
             Asignar
           </button>
-        )}
+        )
+      )}
       </div>
 
       {/* Modal */}

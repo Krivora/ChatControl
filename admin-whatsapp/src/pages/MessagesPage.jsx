@@ -11,20 +11,9 @@ export default function MessagesPage() {
   const [selectedId, setSelectedId] = useState(null);
   const { darkMode } = useTheme();
   const location = useLocation();
-
-  // 🔹 Lista de conversaciones (se actualiza cada 10s)
   const { conversations, loading: loadingConvs } = useConversations();
-
-  // 🔹 Detalle de conversación seleccionada (info + mensajes)
-  const {
-    conversation: chat,
-    messages,
-    loading: loadingChat,
-  } = useConversationDetail(selectedId);
-
-  const [mobileView, setMobileView] = useState("list"); // "list" | "chat" | "info"
-
-  // 🧭 Si vienes desde Dashboard con un conversationId
+  const {conversation: chat,messages,loading: loadingChat,} = useConversationDetail(selectedId);
+  const [mobileView, setMobileView] = useState("list");
   useEffect(() => {
     if (location.state?.conversationId) {
       setSelectedId(location.state.conversationId);

@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
-import { FaHome, FaCog, FaEnvelope, FaRegUserCircle, FaCalendar } from "react-icons/fa";
+import {
+  FaHome,
+  FaCog,
+  FaEnvelope,
+  FaRegUserCircle,
+  FaCalendar,
+  FaTasks,
+} from "react-icons/fa";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const { darkMode } = useTheme();
+  const { user } = useAuth(); // 👈 obtenemos el usuario
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -23,14 +32,25 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     ? "w-56"
     : "w-16";
 
-  const menuItems = [
+  // 🔒 menú dinámico según rol
+  const baseItems = [
     { id: "home", label: "Inicio", icon: <FaHome />, path: "/" },
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
-    { id: "assignment", label: "Asignacion", icon: <FaRegUserCircle />, path: "/assignments" },
+    { id: "assignment", label: "Asignación", icon: <FaTasks />, path: "/assignments" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
-    { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
     { id: "configuration", label: "Configuración", icon: <FaCog />, path: "/configuration" },
   ];
+
+  const adminItems = [
+    { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
+  ];
+
+  const menuItems =
+    user?.role === "super_admin"
+      ? [...baseItems, ...adminItems]
+      : user?.role === "admin"
+      ? [...baseItems, ...adminItems.filter((i) => i.id !== "users")] // admin no ve “usuarios”
+      : baseItems;
 
   return (
     <aside
@@ -55,7 +75,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             </span>
           </>
         ) : (
-          // versión colapsada: solo la S
           <span className="text-xl font-bold text-[#960b2b]">S</span>
         )}
       </div>

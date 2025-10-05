@@ -1,32 +1,46 @@
 // src/routes/users.routes.js
 import { Router } from 'express';
-import { register, listUsers, getUser, login } from '../controllers/users.controller.js';
+import {
+  listUsers,
+  getUser,
+  login,
+  deleteUser,
+  updateDarkMode,
+  createUser,
+  updateUser
+} from '../controllers/users.controller.js';
 import { validate } from '../middlewares/validate.js';
-import { registerUserSchema, loginUserSchema } from '../validators/users.validators.js';
+import { registerUserSchema, loginUserSchema,updateUserSchema } from '../validators/users.validators.js';
 import { requireAuth } from '../middlewares/auth.js';
-import { deleteUser } from '../controllers/users.controller.js';
-import { updateDarkMode } from '../controllers/users.controller.js';
-import { createUser, updateUser } from '../controllers/users.controller.js';
+import { authorizeRole } from '../middlewares/authorizeRole.js';
 
 const r = Router();
-
-// Registro público (para que alguien se cree una cuenta)
-r.post('/register', validate(registerUserSchema), register);
 
 // Login
 r.post('/login', validate(loginUserSchema), login);
 
-// Listado y detalle (requiere auth)
+// Listar todos los usuarios → Solo admin o super_admin
 r.get('/', requireAuth, listUsers);
+
+// Obtener detalle de usuario → cualquier usuario autenticado puede ver el suyo
 r.get('/:id', requireAuth, getUser);
 
-// Creación interna (solo admin puede crear usuarios)
-r.post('/', requireAuth, validate(registerUserSchema), createUser);
+// Crear usuario interno → Solo admin o super_admin
+r.post(
+  '/',
+  requireAuth,
+  authorizeRole('admin', 'super_admin'),
+  validate(registerUserSchema),
+  createUser
+);
 
-// Update, delete
-r.put('/:id', requireAuth, updateUser);
-r.delete('/:id', requireAuth, deleteUser);
+// Actualizar usuario → puede hacerlo un admin o el mismo usuario
+r.put('/:id', requireAuth, authorizeRole('admin', 'super_admin'), validate(updateUserSchema), updateUser);
 
-// Toggle darkMode
+// Eliminar usuario → Solo admin o super_admin
+r.delete('/:id', requireAuth, authorizeRole('admin', 'super_admin'), deleteUser);
+
+// Cambiar modo oscuro → cualquier usuario autenticado
 r.patch('/dark-mode', requireAuth, updateDarkMode);
+
 export default r;

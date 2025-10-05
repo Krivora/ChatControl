@@ -50,6 +50,7 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
               <th className="px-6 py-3">Email</th>
               <th className="px-6 py-3">Teléfono</th>
               <th className="px-6 py-3">Género</th>
+              <th className="px-6 py-3">Rol</th>
               <th className="px-6 py-3 text-right">Acciones</th>
             </tr>
           </thead>
@@ -67,6 +68,9 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
                 </td>
                 <td className="px-6 py-4">
                   <Skeleton variant="text" width={120} animation="wave" />
+                </td>
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={80} animation="wave" />
                 </td>
                 <td className="px-6 py-4">
                   <Skeleton variant="text" width={80} animation="wave" />
@@ -129,6 +133,7 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
             <th className="px-6 py-3">Email</th>
             <th className="px-6 py-3">Teléfono</th>
             <th className="px-6 py-3">Género</th>
+            <th className="px-6 py-3">Rol</th>
             <th className="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
@@ -161,7 +166,9 @@ export default function UsersTable({ users, loading, onEdit, onDelete }) {
               <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                 {u.genero === "M" ? "Masculino" : u.genero === "F" ? "Femenino" : "Otro"}
               </td>
-
+              <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                {u.role_id === 1 ? "Super Administrador": u.role_id === 2 ? "Administrador": u.role_id === 3 ? "Usuario": "Sin Rol"} 
+              </td>     
               <td className="px-6 py-4 text-right">
                 <div className="flex justify-end gap-2">
                   <button onClick={() => onDelete(u.id)} className={actionBtn}>

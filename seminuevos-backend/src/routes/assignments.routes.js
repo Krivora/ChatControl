@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  listAllAssignments,   // 👈 nuevo
+  listAllAssignments,
   listAssignments,
   getAssignment,
   createAssignment,
@@ -8,25 +8,13 @@ import {
   deleteAssignment
 } from '../controllers/assignments.controller.js';
 import { requireAuth } from '../middlewares/auth.js';
-
+import { authorizeRole } from '../middlewares/authorizeRole.js'; 
 const r = Router();
-
-// GET /api/assignments  -> todos los asignados
 r.get('/', requireAuth, listAllAssignments);
-
-// GET /api/assignments/conversation/:conversationId -> por conversación
 r.get('/conversation/:conversationId', requireAuth, listAssignments);
-
-// GET /api/assignments/:id
 r.get('/:id', requireAuth, getAssignment);
-
-// POST /api/assignments
-r.post('/', requireAuth, createAssignment);
-
-// PUT /api/assignments/:id
-r.put('/:id', requireAuth, updateAssignment);
-
-// DELETE /api/assignments/:id
-r.delete('/:id', requireAuth, deleteAssignment);
+r.post('/', requireAuth, authorizeRole('admin', 'super_admin'), createAssignment);
+r.put('/:id', requireAuth, authorizeRole('admin', 'super_admin'), updateAssignment);
+r.delete('/:id', requireAuth, authorizeRole('admin', 'super_admin'), deleteAssignment);
 
 export default r;

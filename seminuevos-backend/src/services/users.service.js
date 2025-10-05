@@ -1,4 +1,3 @@
-// src/services/users.service.js
 import bcrypt from 'bcryptjs';
 import { UsersRepo } from '../repositories/users.repo.js';
 import { parsePagination } from '../utils/pagination.js';
@@ -8,19 +7,42 @@ import { signToken } from '../utils/jwt.js';
 export const UsersService = {
 
   async register(req) {
-    const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
+    const {
+      nombre,
+      apellido,
+      email,
+      telefono,
+      fecha_nacimiento,
+      genero,
+      password,
+      role_id // 👈 nuevo campo opcional
+    } = req.body;
+
     const existing = await UsersRepo.getByEmail(email);
     if (existing) throw new ApiError(400, 'El email ya está registrado');
 
     const passwordHash = await bcrypt.hash(password, 10);
-    return UsersRepo.create({ nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash });
+
+    // Si no se envía role_id, asigna “usuario” por defecto (por ejemplo, id=3)
+    const defaultRoleId = 3;
+    const finalRoleId = role_id || defaultRoleId;
+
+    return UsersRepo.create({
+      nombre,
+      apellido,
+      email,
+      telefono,
+      fecha_nacimiento,
+      genero,
+      passwordHash,
+      role_id: finalRoleId
+    });
   },
 
   async list(req) {
     const { limit, offset, page, pageSize } = parsePagination(req);
-    const [items, total] = await Promise.all([
-      UsersRepo.list({ limit, offset }),
-    ]);
+    const items = await UsersRepo.list({ limit, offset });
+    const total = items.length; // Si no tienes COUNT separado
     return { items, meta: { page, pageSize, total } };
   },
 
@@ -39,11 +61,14 @@ export const UsersService = {
     const match = await bcrypt.compare(password, user.password);
     if (!match) throw new ApiError(401, 'Credenciales inválidas');
 
+    // 👇 Agregamos el role_id y role_name al token
     const token = signToken({
       id: user.id,
       email: user.email,
       nombre: user.nombre,
-      apellido: user.apellido
+      apellido: user.apellido,
+      role_id: user.role_id,
+      role: user.role_name || 'usuario'
     });
 
     return {
@@ -52,7 +77,9 @@ export const UsersService = {
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
-        darkMode: user.dark_mode
+        darkMode: user.dark_mode,
+        role_id: user.role_id,
+        role: user.role_name
       },
       token
     };
@@ -60,7 +87,16 @@ export const UsersService = {
 
   async update(req) {
     const { id } = req.params;
-    const { nombre, apellido, email, telefono, fecha_nacimiento, genero, password } = req.body;
+    const {
+      nombre,
+      apellido,
+      email,
+      telefono,
+      fecha_nacimiento,
+      genero,
+      password,
+      role_id // 👈 permitir actualizar rol
+    } = req.body;
 
     const user = await UsersRepo.getById(id);
     if (!user) throw new ApiError(404, 'Usuario no encontrado');
@@ -73,7 +109,16 @@ export const UsersService = {
 
     const passwordHash = password ? await bcrypt.hash(password, 10) : user.password;
 
-    return UsersRepo.update(id, { nombre, apellido, email, telefono, fecha_nacimiento, genero, passwordHash });
+    return UsersRepo.update(id, {
+      nombre,
+      apellido,
+      email,
+      telefono,
+      fecha_nacimiento,
+      genero,
+      passwordHash,
+      role_id
+    });
   },
 
   async updateDarkMode(req) {
@@ -90,7 +135,7 @@ export const UsersService = {
       darkMode: updatedUser.dark_mode
     };
   },
-   
+
   async softDelete(req) {
     const { id } = req.params;
     const user = await UsersRepo.getById(id);
@@ -98,5 +143,4 @@ export const UsersService = {
 
     return UsersRepo.softDelete(id);
   }
-
 };

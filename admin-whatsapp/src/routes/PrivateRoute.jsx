@@ -1,8 +1,12 @@
+// src/routes/PrivateRoute.jsx
 import { Navigate, Outlet } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { useAuth } from "../context/AuthContext";
 
-export default function PrivateRoute() {
+export default function PrivateRoute({ roles }) {
   const token = localStorage.getItem("token");
+  const { user } = useAuth();
+
 
   if (!token) return <Navigate to="/login" replace />;
 
@@ -17,7 +21,9 @@ export default function PrivateRoute() {
     console.error("Error decoding token:", e);
     return <Navigate to="/login" replace />;
   }
+  if (roles && user && !roles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
   return <Outlet />;
 }
-
