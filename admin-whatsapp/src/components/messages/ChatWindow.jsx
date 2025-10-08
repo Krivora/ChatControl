@@ -169,23 +169,29 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
         {chatEntries.map((msg) => {
           const isBot = msg.sender === "bot";
           const justify = isBot ? "justify-end" : "justify-start";
-
           const bubbleClass = isBot
             ? "bg-[#960b2b] text-white rounded-br-none"
             : "bg-gray-300 text-gray-900 rounded-bl-none";
 
+          // Convertir fecha a hora local
+          let dateStr = "Hora desconocida";
+          if (msg.created_at) {
+            // Formato ISO básico
+            const dateISO = msg.created_at.replace(" ", "T").split(".")[0];
+            const d = new Date(dateISO);
+
+            if (!isNaN(d.getTime())) {
+              // Ajuste manual a la hora deseada (ejemplo: -14 horas para que 11:55 a.m. sea 9:55 p.m.)
+              d.setHours(d.getHours() - 14); // ajusta según tu diferencia exacta
+
+              dateStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+            }
+          }
           return (
             <div key={msg.id} className={`flex ${justify}`}>
-              <div
-                className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${bubbleClass}`}
-              >
+              <div className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${bubbleClass}`}>
                 <p className="whitespace-pre-line">{msg.content}</p>
-                <span className="text-[11px] opacity-70 block mt-1 text-right">
-                  {new Date(msg.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                <span className="text-[11px] opacity-70 block mt-1 text-right">{dateStr}</span>
               </div>
             </div>
           );

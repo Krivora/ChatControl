@@ -48,7 +48,6 @@ function calculatePoints(answers = []) {
   }, 0);
 }
 
-// Rangos de puntaje con color
 const scoreRanges = [
   { min: 0, max: 50, color: "bg-red-500", label: "Malo" },
   { min: 51, max: 100, color: "bg-yellow-400", label: "Regular" },
@@ -78,12 +77,26 @@ export default function ConversationList({ conversations = [], onSelect, selecte
           const range = getRange(totalPoints);
 
           const lastMessage = conv.last_message || "Sin mensajes aún";
-          const lastMessageTime = conv.last_message_time
-            ? new Date(conv.last_message_time).toLocaleTimeString([], {
+
+          // ---------------------
+          // Hora con ajuste manual
+          // ---------------------
+          let lastMessageTime = "Hora desconocida";
+          if (conv.last_message_time) {
+            const dateISO = conv.last_message_time.replace(" ", "T").split(".")[0];
+            const d = new Date(dateISO);
+
+            if (!isNaN(d.getTime())) {
+              // Ajusta según tu diferencia exacta
+              d.setHours(d.getHours() - 14); // por ejemplo, para que 11:55 a.m. sea 9:55 p.m.
+
+              lastMessageTime = d.toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
-              })
-            : "";
+                hour12: true,
+              });
+            }
+          }
 
           return (
             <div
@@ -97,7 +110,6 @@ export default function ConversationList({ conversations = [], onSelect, selecte
                   : "hover:bg-gray-100 border-gray-200"
               }`}
             >
-              {/* Fila principal: Nombre | Color | Fecha */}
               <div className="flex justify-between items-center mb-1">
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold">{conv.customer_name}</span>
@@ -108,8 +120,6 @@ export default function ConversationList({ conversations = [], onSelect, selecte
                 </div>
                 <span className="text-xs opacity-70">{lastMessageTime}</span>
               </div>
-
-              {/* Último mensaje */}
               <p className="text-sm truncate opacity-80">{lastMessage}</p>
             </div>
           );
