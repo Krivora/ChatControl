@@ -39,8 +39,13 @@ export const AssignmentsService = {
   },
 
   async listAll(req) {
-    const userId = req.user.id;
-    const result = await AssignmentsRepo.listByUser(userId);
-    return result;
+    const role = req.user.role.toLowerCase();
+    if (role === "usuario") {
+      return AssignmentsRepo.listByUser(req.user.id);
+    } else {
+      return AssignmentsRepo.listAll(); // 🔹 CORRECTO
+    }
   },
+
+
 };

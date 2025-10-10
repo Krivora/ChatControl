@@ -59,20 +59,13 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
 
   // 🔒 filtrado según rol
   const filteredAssignments = useMemo(() => {
-    let filtered = assignments || [];
-
-    if (user?.role === "usuario") {
-      // solo asignaciones propias
-      filtered = filtered.filter(a => a.user_id === user.id);
-    }
-
-    return filtered.filter(a => {
-      const userName = users.find(u => u.id === a.user_id)?.nombre || "";
+    return (assignments || []).filter(a => {
+      const user = (users || []).find(u => u.id === a.user_id)?.nombre || "";
       const status = a?.status_assignment || "";
       const customer = a?.customer_name || "";
-      return `${status} ${customer} ${userName}`.toLowerCase().includes(search.toLowerCase());
+      return `${status} ${customer} ${user}`.toLowerCase().includes(search.toLowerCase());
     });
-  }, [assignments, search, users, user]);
+  }, [assignments, search, users]);
 
   const totalPages = Math.ceil(filteredAssignments.length / rowsPerPage);
   const paginatedAssignments = filteredAssignments.slice(

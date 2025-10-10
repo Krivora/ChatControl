@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext"; 
 import AssignmentTableFull from "../components/assignments/AssignmentTableFull";
 import StatusFormDialog from "../components/assignments/StatusFormDialog";
 import { AssignmentsApi } from "../api/assignments";
+import { UsersApi } from "../api/users";
 import { useAlert } from "../utils/alert";
 import ChatWindow from "../components/messages/ChatWindow";
 import { useConversationDetail } from "../hooks/useConversationsMessages";
@@ -10,55 +12,50 @@ import { useAssignments } from "../hooks/useAssignments";
 
 export default function AssignmentPage() {
   const { darkMode } = useTheme();
+  const { user } = useAuth(); 
   const { showSnack } = useAlert();
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [editAssignment, setEditAssignment] = useState(null);
   const [activeTab, setActiveTab] = useState("active");
   const [selectedConversationId, setSelectedConversationId] = useState(null);
+  const [users, setUsers] = useState([]);
 
   const { conversation: chat, messages, loading: loadingChat } =
     useConversationDetail(selectedConversationId);
 
   const { assignments, setAssignments } = useAssignments();
 
-  // Estados de asignaciones
   const ACTIVE_STATUSES = ["En proceso"];
-  const HISTORY_STATUSES = [
-    "Rechazado",
-    "Aprobado No Concretado",
-    "Aprobado",
-    "Vendido",
-  ];
+  const HISTORY_STATUSES = ["Rechazado", "Aprobado No Concretado", "Aprobado", "Vendido"];
 
-  // 🔹 Token de sesión (asumiendo JWT en localStorage)
-  const token = localStorage.getItem("token");
+  useEffect(() => {
+    fetchAssignments();
+    fetchUsers();
+  }, []);
 
-  // 🔹 Fetch inicial — solo las asignaciones del usuario autenticado
- useEffect(() => {
-  fetchMyAssignments();
-}, []);
+  const fetchAssignments = async () => {
+    setLoading(true);
+    try {
+      const data = await AssignmentsApi.list();
+      setAssignments(data);
+    } catch (err) {
+      console.error(err);
+      showSnack("Error al cargar asignaciones", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const fetchMyAssignments = async () => {
-  setLoading(true);
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch("/api/assignments/my-assignments", {
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    });
-
-    if (!res.ok) throw new Error("Error al obtener tus asignaciones");
-
-    const data = await res.json();
-    setAssignments(data.data || []);
-  } catch (err) {
-    console.error(err);
-    showSnack("Error al cargar tus asignaciones", "error");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  const fetchUsers = async () => {
+    try {
+      const data = await UsersApi.list();
+      setUsers(Array.isArray(data) ? data : []); // 🔒 aseguramos arreglo
+    } catch (err) {
+      console.error(err);
+      showSnack("Error al cargar usuarios", "error");
+    }
+  };
 
   const handleEdit = (assignment) => {
     setEditAssignment(assignment);
@@ -68,19 +65,11 @@ const fetchMyAssignments = async () => {
   const handleSubmit = async (id, status) => {
     try {
       if (id) {
-        const updated = await AssignmentsApi.update(id, {
-          status_assignment: status,
-        });
-        setAssignments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, ...updated } : a))
-        );
+        const updated = await AssignmentsApi.update(id, { status_assignment: status });
+        setAssignments((prev) => prev.map((a) => (a.id === id ? { ...a, ...updated } : a)));
         showSnack("Asignación actualizada", "success");
       } else {
-        const created = await AssignmentsApi.create({
-          conversation_id: 1,
-          user_id: 1,
-          status: "active",
-        });
+        const created = await AssignmentsApi.create({ conversation_id: 1, user_id: 1, status: "active" });
         setAssignments((prev) => [created, ...prev]);
         showSnack("Asignación creada", "success");
       }
@@ -90,16 +79,24 @@ const fetchMyAssignments = async () => {
     }
   };
 
-  // 🔹 Filtrado según pestaña activa
-  const filteredAssignments = useMemo(() => {
-    return assignments.filter((a) => {
-      return activeTab === "active"
-        ? ACTIVE_STATUSES.includes(a.status_assignment)
-        : HISTORY_STATUSES.includes(a.status_assignment);
-    });
-  }, [assignments, activeTab]);
+  // 🔹 Filtrado por pestaña y rol
+const filteredAssignments = useMemo(() => {
+  const role = user?.role?.toLowerCase?.() || "";
 
-  // 🔹 Abrir chat de conversación vinculada
+  let filtered = assignments.filter(a =>
+    activeTab === "active"
+      ? ACTIVE_STATUSES.includes(a.status_assignment)
+      : HISTORY_STATUSES.includes(a.status_assignment)
+  );
+
+
+  if (role === "usuario") {
+    filtered = filtered.filter(a => a.user_id === user.id);
+  }
+
+  return filtered;
+}, [assignments, activeTab, user]);
+
   const handleOpenChat = (assignment) => {
     if (!assignment.conversation_id) {
       showSnack("Esta asignación no tiene conversación vinculada", "warning");
@@ -109,40 +106,29 @@ const fetchMyAssignments = async () => {
   };
 
   return (
-    <div
-      className={`p-6 h-[calc(100vh-120px)] ${
-        darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"
-      }`}
-    >
-      <h1 className="text-2xl font-semibold mb-4">Mis asignaciones</h1>
+    <div className={`p-6 h-[calc(100vh-120px)] ${darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"}`}>
+      <h1 className="text-2xl font-semibold mb-4">Asignaciones</h1>
 
       {/* Tabs */}
       <div className="flex border-b mb-4">
         <button
           onClick={() => setActiveTab("active")}
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === "active"
-              ? "border-b-2 border-[#960b2b] text-[#960b2b]"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
+          className={`px-4 py-2 text-sm font-medium ${activeTab === "active" ? "border-b-2 border-[#960b2b] text-[#960b2b]" : "text-gray-500 hover:text-gray-700"}`}
         >
           Activas
         </button>
         <button
           onClick={() => setActiveTab("history")}
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === "history"
-              ? "border-b-2 border-[#960b2b] text-[#960b2b]"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
+          className={`px-4 py-2 text-sm font-medium ${activeTab === "history" ? "border-b-2 border-[#960b2b] text-[#960b2b]" : "text-gray-500 hover:text-gray-700"}`}
         >
           Historial
         </button>
       </div>
 
-      {/* Tabla con búsqueda y paginación interna */}
+      {/* Tabla */}
       <AssignmentTableFull
         assignments={filteredAssignments}
+        users={users}
         loading={loading}
         onEdit={handleEdit}
         onOpenChat={handleOpenChat}
@@ -159,26 +145,13 @@ const fetchMyAssignments = async () => {
       {/* Chat Modal */}
       {selectedConversationId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div
-            className={`w-[600px] h-[80vh] rounded-xl shadow-lg flex flex-col ${
-              darkMode ? "bg-[#1f1f1f]" : "bg-white"
-            }`}
-          >
+          <div className={`w-[600px] h-[80vh] rounded-xl shadow-lg flex flex-col ${darkMode ? "bg-[#1f1f1f]" : "bg-white"}`}>
             {loadingChat ? (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                Cargando chat...
-              </div>
+              <div className="flex-1 flex items-center justify-center text-gray-500">Cargando chat...</div>
             ) : chat ? (
-              <ChatWindow
-                chat={chat}
-                messages={messages}
-                loading={loadingChat}
-                darkMode={darkMode}
-              />
+              <ChatWindow chat={chat} messages={messages} loading={loadingChat} darkMode={darkMode} />
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                No se encontró la conversación
-              </div>
+              <div className="flex-1 flex items-center justify-center text-gray-500">No se encontró la conversación</div>
             )}
 
             <div className="p-2 flex justify-end border-t border-gray-200 dark:border-gray-700">
