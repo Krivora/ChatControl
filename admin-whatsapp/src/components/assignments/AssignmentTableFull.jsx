@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Edit, Chat } from "@mui/icons-material";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext"; // 👈 import
 import { Skeleton } from "@mui/material";
 import TableFilters from "../common/TableFilters";
 import Pagination from "../common/TablePagination";
@@ -44,6 +45,7 @@ const scoreRanges = [
 
 export default function AssignmentTableFull({ assignments = [], users = [], loading, onEdit, onOpenChat }) {
   const { darkMode } = useTheme();
+  const { user } = useAuth(); // 👈 usuario loggeado
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -55,20 +57,29 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
     return `${local.slice(0,3)} ${local.slice(3,6)} ${local.slice(6)}`;
   };
 
+  // 🔒 filtrado según rol
   const filteredAssignments = useMemo(() => {
-    return (assignments || []).filter(a => {
-      const user = users.find(u => u.id === a.user_id)?.nombre || "";
+    let filtered = assignments || [];
+
+    if (user?.role === "usuario") {
+      // solo asignaciones propias
+      filtered = filtered.filter(a => a.user_id === user.id);
+    }
+
+    return filtered.filter(a => {
+      const userName = users.find(u => u.id === a.user_id)?.nombre || "";
       const status = a?.status_assignment || "";
       const customer = a?.customer_name || "";
-      return `${status} ${customer} ${user}`.toLowerCase().includes(search.toLowerCase());
+      return `${status} ${customer} ${userName}`.toLowerCase().includes(search.toLowerCase());
     });
-  }, [assignments, search, users]);
+  }, [assignments, search, users, user]);
 
   const totalPages = Math.ceil(filteredAssignments.length / rowsPerPage);
   const paginatedAssignments = filteredAssignments.slice(
     (page - 1) * rowsPerPage,
     page * rowsPerPage
   );
+
 
   const actionBtn = darkMode
     ? "rounded-full p-1 text-gray-400 hover:bg-[#333333] hover:text-white"

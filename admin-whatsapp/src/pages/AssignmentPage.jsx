@@ -31,23 +31,34 @@ export default function AssignmentPage() {
     "Vendido",
   ];
 
-  // Fetch inicial
-  useEffect(() => {
-    fetchAssignments();
-  }, []);
+  // 🔹 Token de sesión (asumiendo JWT en localStorage)
+  const token = localStorage.getItem("token");
 
-  const fetchAssignments = async () => {
-    setLoading(true);
-    try {
-      const data = await AssignmentsApi.list();
-      setAssignments(data);
-    } catch (err) {
-      console.error(err);
-      showSnack("Error al cargar asignaciones", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 🔹 Fetch inicial — solo las asignaciones del usuario autenticado
+ useEffect(() => {
+  fetchMyAssignments();
+}, []);
+
+const fetchMyAssignments = async () => {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch("/api/assignments/my-assignments", {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error("Error al obtener tus asignaciones");
+
+    const data = await res.json();
+    setAssignments(data.data || []);
+  } catch (err) {
+    console.error(err);
+    showSnack("Error al cargar tus asignaciones", "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleEdit = (assignment) => {
     setEditAssignment(assignment);
@@ -79,7 +90,7 @@ export default function AssignmentPage() {
     }
   };
 
-  // Filtrado por pestaña
+  // 🔹 Filtrado según pestaña activa
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
       return activeTab === "active"
@@ -88,7 +99,7 @@ export default function AssignmentPage() {
     });
   }, [assignments, activeTab]);
 
-  // Abrir chat
+  // 🔹 Abrir chat de conversación vinculada
   const handleOpenChat = (assignment) => {
     if (!assignment.conversation_id) {
       showSnack("Esta asignación no tiene conversación vinculada", "warning");
@@ -100,12 +111,10 @@ export default function AssignmentPage() {
   return (
     <div
       className={`p-6 h-[calc(100vh-120px)] ${
-        darkMode
-          ? "bg-[#121212] text-gray-100"
-          : "bg-gray-50 text-gray-900"
+        darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"
       }`}
     >
-      <h1 className="text-2xl font-semibold mb-4">Asignaciones</h1>
+      <h1 className="text-2xl font-semibold mb-4">Mis asignaciones</h1>
 
       {/* Tabs */}
       <div className="flex border-b mb-4">
@@ -136,7 +145,7 @@ export default function AssignmentPage() {
         assignments={filteredAssignments}
         loading={loading}
         onEdit={handleEdit}
-        onOpenChat={handleOpenChat} // ✅ Llama al chat
+        onOpenChat={handleOpenChat}
       />
 
       {/* Diálogo de status */}

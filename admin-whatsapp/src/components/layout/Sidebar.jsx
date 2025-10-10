@@ -45,12 +45,17 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { id: "users", label: "Usuarios", icon: <FaRegUserCircle />, path: "/users" },
   ];
 
-  const menuItems =
-    user?.role === "super_admin"
-      ? [...baseItems, ...adminItems]
-      : user?.role === "admin"
-      ? [...baseItems, ...adminItems.filter((i) => i.id !== "users")] // admin no ve “usuarios”
-      : baseItems;
+ const menuItems =
+  user?.role === "super_admin"
+    ? [...baseItems, ...adminItems]
+    : user?.role === "admin"
+    ? [...baseItems, ...adminItems.filter((i) => i.id !== "users")] // admin no ve “usuarios”
+    : user?.role === "usuario"
+    ? baseItems.filter(
+        (i) => i.id === "assignment" || i.id === "appointments"
+      ) // usuario solo ve Asignación y Citas
+    : baseItems;
+
 
   return (
     <aside

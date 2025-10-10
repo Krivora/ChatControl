@@ -101,5 +101,33 @@ async listAll() {
   async delete(id) {
     await pool.query(`DELETE FROM assignments WHERE id = $1`, [id]);
     return true;
+  },
+   async listByUser(userId) {
+    const { rows } = await pool.query(`
+      SELECT
+        a.id,
+        a.conversation_id,
+        a.user_id,
+        u.nombre AS user_nombre,
+        u.apellido AS user_apellido,
+        a.status,
+        a.status_assignment,
+        a.assigned_at,
+        cu.full_name AS customer_name,
+        cu.whatsapp_id,
+        COALESCE(json_agg(
+          json_build_object('id', ans.id, 'question_key', ans.question_key, 'answer_value', ans.answer_value)
+        ) FILTER (WHERE ans.id IS NOT NULL), '[]') AS answers
+      FROM assignments a
+      LEFT JOIN conversations c ON c.id = a.conversation_id
+      LEFT JOIN customers cu ON cu.id = c.customer_id
+      LEFT JOIN answers ans ON ans.conversation_id = c.id
+      LEFT JOIN users u ON u.id = a.user_id
+      WHERE a.status = 'active' AND a.user_id = $1
+      GROUP BY a.id, cu.full_name, cu.whatsapp_id, u.id
+      ORDER BY a.assigned_at DESC
+    `, [userId]);
+    return rows;
   }
+
 };

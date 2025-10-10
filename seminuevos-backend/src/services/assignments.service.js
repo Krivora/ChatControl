@@ -38,11 +38,9 @@ export const AssignmentsService = {
     return { success: true };
   },
 
-async listAll() {
-  const result = await AssignmentsRepo.listAll();
-  return result;
-},
-
-
-
+  async listAll(req) {
+    const userId = req.user.id;
+    const result = await AssignmentsRepo.listByUser(userId);
+    return result;
+  },
 };

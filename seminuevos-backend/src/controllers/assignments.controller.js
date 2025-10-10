@@ -2,7 +2,7 @@ import { AssignmentsService } from "../services/assignments.service.js";
 
 export async function listAllAssignments(req, res) {
   try {
-    const data = await AssignmentsService.listAll();
+    const data = await AssignmentsService.listAll(req); // <- pasar req
     res.json({ data });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
