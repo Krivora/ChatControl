@@ -26,8 +26,8 @@ export default function AssignmentPage() {
 
   const { assignments, setAssignments } = useAssignments();
 
-  const ACTIVE_STATUSES = ["En proceso"];
-  const HISTORY_STATUSES = ["Rechazado", "Aprobado No Concretado", "Aprobado", "Vendido"];
+  const ACTIVE_STATUSES = ["Aprobado", "Aprobado No Concretado","En proceso"];
+  const HISTORY_STATUSES = ["Rechazado", "Descartado", "Vendido"];
 
   useEffect(() => {
     fetchAssignments();

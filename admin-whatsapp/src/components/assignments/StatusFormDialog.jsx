@@ -15,11 +15,12 @@ import { useTheme } from "../../context/ThemeContext";
 export default function StatusFormDialog({ open, onClose, assignment, onSubmit }) {
   const { darkMode } = useTheme();
   const statusOptions = [
-    "Rechazado",
     "Aprobado",
     "Aprobado No Concretado",
-    "Vendido",
+    "Descartado",
     "En proceso",
+    "Rechazado",
+    "Vendido"
   ];
 
   const [selectedStatus, setSelectedStatus] = useState("");
