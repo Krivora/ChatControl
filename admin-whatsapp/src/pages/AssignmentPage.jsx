@@ -50,7 +50,7 @@ export default function AssignmentPage() {
   const fetchUsers = async () => {
     try {
       const data = await UsersApi.list();
-      setUsers(Array.isArray(data) ? data : []);
+      setUsers(Array.isArray(data) ? data : []); // 🔒 aseguramos arreglo
     } catch (err) {
       console.error(err);
       showSnack("Error al cargar usuarios", "error");
