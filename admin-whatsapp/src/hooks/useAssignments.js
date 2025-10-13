@@ -20,7 +20,6 @@ export function useAssignments() {
         for (const a of newData) {
           const existing = prevMap.get(a.id);
           if (!existing) {
-            // 🆕 nueva asignación
             merged.push({ ...a, _new: true });
           } else {
             // 🔄 actualizada o igual
@@ -32,10 +31,6 @@ export function useAssignments() {
           }
           prevMap.delete(a.id);
         }
-
-        // Podrías manejar eliminadas si quieres
-        // const deletedIds = Array.from(prevMap.keys());
-
         return merged;
       });
     } catch (err) {
@@ -52,9 +47,9 @@ export function useAssignments() {
   // 🔁 Auto-recarga cada 10s
   useEffect(() => {
     loadAssignments();
-    const interval = setInterval(loadAssignments, 500);
-    return () => clearInterval(interval);
+    return () => {};
   }, []);
+
 
   // ⏳ Limpiar flags _new y _updated
   useEffect(() => {

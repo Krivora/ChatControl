@@ -8,6 +8,7 @@ export function useConversationDetail(conversationId) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const socketRef = useRef(null);
+  const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
   // 🟢 1️⃣ Cargar datos iniciales al seleccionar conversación
   useEffect(() => {
@@ -35,7 +36,7 @@ export function useConversationDetail(conversationId) {
     if (!conversationId) return;
 
     // 🔌 Conecta al backend de sockets (ajusta si usas dominio distinto)
-    const socket = io("http://localhost:4000"); // o tu dominio
+    const socket = io(`${BASE}`); // o tu dominio
     socketRef.current = socket;
 
     // 🔊 Unirse al canal de esta conversación
