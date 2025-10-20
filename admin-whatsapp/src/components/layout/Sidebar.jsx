@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     { id: "messages", label: "Mensajes", icon: <FaEnvelope />, path: "/messages" },
     { id: "assignment", label: "Asignación", icon: <FaTasks />, path: "/assignments" },
     { id: "appointments", label: "Citas", icon: <FaCalendar />, path: "/appointments" },
-    { id: "configuration", label: "Configuración", icon: <FaCog />, path: "/configuration" },
+    { id: "configuration", label: "Configuración", icon: <FaCog />, path: "/contents" },
   ];
 
   const adminItems = [

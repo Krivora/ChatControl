@@ -4,7 +4,7 @@ import Login from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Messages from "./pages/MessagesPage";
 import AppointmentsPage from "./pages/AppointmentPage";
-import ConfigurationPage from "./pages/ConfigurationPage";
+import ContentsPage from "./pages/ContentsPage";
 import UsersPage from "./pages/UsersPage";
 import AssignmentPage from "./pages/AssignmentPage";
 import PrivateRoute from "./routes/PrivateRoute";
@@ -20,7 +20,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/appointments" element={<AppointmentsPage />} />
-            <Route path="/configuration" element={<ConfigurationPage />} />
+            <Route path="/contents" element={<ContentsPage />} />
             <Route path="/users" element={<PrivateRoute roles={["admin", "super_admin"]} />}>
               <Route index element={<UsersPage />} />
             </Route>
