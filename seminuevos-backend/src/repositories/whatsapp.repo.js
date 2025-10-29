@@ -1,4 +1,3 @@
-
 const TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const API_URL = `https://graph.facebook.com/v22.0/${PHONE_ID}/messages`;

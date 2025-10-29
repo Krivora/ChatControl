@@ -1,4 +1,3 @@
-// src/server.js
 import http from "http";
 import { Server } from "socket.io";
 import { pool } from "./config/db.js";
@@ -10,7 +9,7 @@ const io = new Server(server, {
   cors: { origin: "*" },
 });
 
-// 🔌 Escucha conexiones
+// 🔌 Escucha conexiones Socket.IO
 io.on("connection", (socket) => {
   console.log(`🟢 Cliente conectado: ${socket.id}`);
 
@@ -49,6 +48,7 @@ pool.connect((err, client) => {
   client.query("LISTEN new_message");
 });
 
+// 🚀 Importante: el auto-followup ya está corriendo dentro de app.js
 server.listen(env.PORT, () => {
   console.log(`✅ Servidor escuchando en http://localhost:${env.PORT}`);
 });
