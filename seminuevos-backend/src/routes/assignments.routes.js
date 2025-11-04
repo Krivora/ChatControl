@@ -14,7 +14,7 @@ r.get('/', requireAuth, listAllAssignments);
 r.get('/conversation/:conversationId', requireAuth, listAssignments);
 r.get('/:id', requireAuth, getAssignment);
 r.post('/', requireAuth, authorizeRole('admin', 'super_admin'), createAssignment);
-r.put('/:id', requireAuth, authorizeRole('admin', 'super_admin'), updateAssignment);
+r.put('/:id', requireAuth, updateAssignment);
 r.delete('/:id', requireAuth, authorizeRole('admin', 'super_admin'), deleteAssignment);
 
 export default r;
