@@ -82,21 +82,30 @@ export default function ConversationList({ conversations = [], onSelect, selecte
           // Hora con ajuste manual
           // ---------------------
           let lastMessageTime = "Hora desconocida";
-          if (conv.last_message_time) {
-            const dateISO = conv.last_message_time.replace(" ", "T").split(".")[0];
-            const d = new Date(dateISO);
+if (conv.last_message_time) {
+  const dateISO = conv.last_message_time.replace(" ", "T").split(".")[0];
+  const d = new Date(dateISO);
 
-            if (!isNaN(d.getTime())) {
-              // Ajusta según tu diferencia exacta
-              d.setHours(d.getHours() - 14); // por ejemplo, para que 11:55 a.m. sea 9:55 p.m.
+  if (!isNaN(d.getTime())) {
+    // Ajusta tu zona horaria si es necesario (ejemplo -6 México)
+    d.setHours(d.getHours() - 6);
 
-              lastMessageTime = d.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              });
-            }
-          }
+    const hora = d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const dia = d.toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    lastMessageTime = `${hora} · ${dia}`; // 👈 Hora seguida del día
+  }
+}
+
 
           return (
             <div
