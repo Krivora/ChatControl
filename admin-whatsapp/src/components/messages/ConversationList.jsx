@@ -106,7 +106,6 @@ export default function ConversationList({ conversations = [], onSelect, selecte
             }
           }
 
-
           return (
             <div
               key={conv.id}
