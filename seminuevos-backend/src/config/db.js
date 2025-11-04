@@ -4,15 +4,12 @@ import { env } from './env.js';
 
 const { Pool } = pg;
 
-// En DO normalmente basta con rejectUnauthorized:false cuando PG_SSL=require
-const ssl =
-  env.SSL_REQUIRED
-    ? { rejectUnauthorized: false } // Usa true + CA si tienes el certificado
-    : false;
+// Config SSL (DigitalOcean, Render, etc.)
+const ssl = env.SSL_REQUIRED ? { rejectUnauthorized: false } : false;
 
 const basePoolConfig = {
-  max: 20,                    // conexiones simultáneas
-  idleTimeoutMillis: 30_000,  // cierra conexiones ociosas
+  max: 20,
+  idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 2_000,
   keepAlive: true,
   ssl,
@@ -29,14 +26,15 @@ const poolConfig = env.DATABASE_URL
       database: env.PG_DATABASE,
     };
 
-export const pool = new Pool(poolConfig);
+// 🔹 Instancia única del pool
+export let pool = new Pool(poolConfig);
 
-// Logs útiles
+// 🔸 Log de errores
 pool.on('error', (err) => {
-  console.error('[PG] Pool error:', err);
+  console.error('[PG] Pool error:', err.message);
 });
 
-// Ping rápido para detectar problemas al arrancar
+// 🔸 Verificación inicial
 (async () => {
   try {
     await pool.query('SELECT 1');
@@ -48,17 +46,25 @@ pool.on('error', (err) => {
   }
 })();
 
-// Cierre limpio al terminar el proceso
-const shutdown = async (signal) => {
-  try {
-    await pool.end();
-    console.log('[PG] Pool cerrado por', signal);
-  } catch (e) {
-    console.error('[PG] Error cerrando pool:', e.message);
-  } finally {
-    process.exit(0);
+// 🔹 Protección: evita cierres accidentales del pool
+const originalEnd = pool.end.bind(pool);
+pool.end = (...args) => {
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn('[PG] pool.end() bloqueado en producción');
+    return Promise.resolve();
   }
+  return originalEnd(...args);
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+// 🔹 Auto-reconexión si el pool se cierra accidentalmente
+import pgPackage from 'pg';
+setInterval(async () => {
+  try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    if (err.message.includes('Cannot use a pool after calling end')) {
+      console.warn('[PG] Pool recreado automáticamente tras cierre');
+      pool = new pgPackage.Pool(poolConfig);
+    }
+  }
+}, 30_000);
