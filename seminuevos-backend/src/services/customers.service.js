@@ -22,4 +22,16 @@ export const CustomersService = {
     if (!customer) throw new ApiError(404, 'Cliente no encontrado');
     return customer;
   },
+
+  async update(req) {
+    const id = req.params.id;
+    const full_name = req.body?.full_name?.trim();
+
+    if (!full_name) throw new ApiError(400, 'El nombre no puede estar vacío');
+    if (full_name.length > 120) throw new ApiError(400, 'El nombre es demasiado largo');
+
+    const updated = await CustomersRepo.update(id, { full_name });
+    if (!updated) throw new ApiError(404, 'Cliente no encontrado');
+    return updated;
+  },
 };

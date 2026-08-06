@@ -7,6 +7,20 @@ import { useTheme } from "../context/ThemeContext";
 import { UsersApi } from "../api/users";
 import { AppointmentsApi } from "../api/appointments"; 
 
+// Citas que siguen "vivas": las canceladas, completadas y no-show no cuentan
+// como próximas.
+const UPCOMING_STATUSES = ["pending", "confirmed", "in_progress", "rescheduled"];
+
+// Día local en formato YYYY-MM-DD. Comparar cadenas evita los corrimientos
+// de zona horaria que produce toISOString().
+const toLocalDay = (value) => {
+  const d = new Date(value);
+  if (isNaN(d)) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+};
+
 export default function Dashboard() {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
@@ -205,10 +219,18 @@ export default function Dashboard() {
 
 
   // ---- Fetch appointments ----
+  // Se piden solo las de hoy en adelante y con status vigente: el backend
+  // pagina en 20 por defecto ordenando por fecha ascendente, así que sin
+  // filtros solo llegaban las más viejas del histórico.
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const res = await AppointmentsApi.list();
+        const res = await AppointmentsApi.list({
+          statuses: UPCOMING_STATUSES.join(","),
+          dateFrom: toLocalDay(new Date()),
+          order: "asc",
+          pageSize: 100,
+        });
         setAppointments(res.data || []);
       } catch (err) {
         console.error(err);
@@ -219,35 +241,24 @@ export default function Dashboard() {
 
     // ---- Procesar citas ----
   useEffect(() => {
-    if (!appointments.length || !customers.length) return;
-    const today = new Date();
+    const today = toLocalDay(new Date());
 
-    const formatAppointment = appt => {
-      const customer = customers.find(c=>c.id===appt.customer_id);
-      return `${customer?.full_name || "Sin nombre"}\n${new Date(appt.date).toISOString().split("T")[0]} ${appt.time_start}`;
-    };
+    // `customer_name` ya viene resuelto por el backend; buscarlo en la lista
+    // de customers fallaba porque esa también llega paginada.
+    const formatAppointment = (appt) =>
+      `${appt.customer_name || "Sin nombre"}\n${toLocalDay(appt.date)} ${appt.time_start}`;
 
-    const sortAppointments = arr => arr.sort((a,b)=>{
-      const [h1,m1,s1]=a.time_start.split(":").map(Number);
-      const [h2,m2,s2]=b.time_start.split(":").map(Number);
-      const dA = new Date(a.date); dA.setHours(h1,m1,s1,0);
-      const dB = new Date(b.date); dB.setHours(h2,m2,s2,0);
-      return dA-dB;
-    });
+    const key = (a) => `${toLocalDay(a.date)} ${a.time_start}`;
+    const sorted = [...appointments].sort((a, b) => key(a).localeCompare(key(b)));
 
-    setTodayAppointments(sortAppointments(appointments.filter(a=>{
-      if(a.status.toLowerCase()!=="confirmed") return false;
-      const d = new Date(a.date);
-      return d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
-    })).map(formatAppointment));
+    setTodayAppointments(
+      sorted.filter((a) => toLocalDay(a.date) === today).map(formatAppointment)
+    );
 
-    setUpcomingAppointments(sortAppointments(appointments.filter(a=>{
-      if(a.status.toLowerCase()!=="confirmed") return false;
-      const d = new Date(a.date);
-      return !(d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate());
-    })).map(formatAppointment));
-
-  }, [appointments, customers]);
+    setUpcomingAppointments(
+      sorted.filter((a) => toLocalDay(a.date) > today).map(formatAppointment)
+    );
+  }, [appointments]);
 
   return (
     <div className={`min-h-screen p-5 ${darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"}`}>

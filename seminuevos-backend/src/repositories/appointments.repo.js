@@ -1,23 +1,39 @@
 // src/repositories/appointments.repo.js
 import { pool } from '../config/db.js';
 
-export const AppointmentsRepo = {
-  async list({ dateFrom, dateTo, status, limit, offset }) {
-    const params = [];
-    const where = [];
+// Filtros compartidos por list/count/countsByStatus para que los tres
+// cuenten exactamente sobre el mismo universo de filas.
+const buildFilters = ({ dateFrom, dateTo, status, statuses, q }) => {
+  const params = [];
+  const where = [];
 
-    if (dateFrom) {
-      params.push(dateFrom);
-      where.push(`a.date >= $${params.length}`);
-    }
-    if (dateTo) {
-      params.push(dateTo);
-      where.push(`a.date <= $${params.length}`);
-    }
-    if (status) {
-      params.push(status);
-      where.push(`a.status = $${params.length}`);
-    }
+  if (dateFrom) {
+    params.push(dateFrom);
+    where.push(`a.date >= $${params.length}`);
+  }
+  if (dateTo) {
+    params.push(dateTo);
+    where.push(`a.date <= $${params.length}`);
+  }
+
+  const statusList = statuses?.length ? statuses : (status ? [status] : []);
+  if (statusList.length) {
+    params.push(statusList);
+    where.push(`a.status = ANY($${params.length})`);
+  }
+
+  if (q) {
+    params.push(`%${q}%`);
+    where.push(`(c.full_name ILIKE $${params.length} OR c.whatsapp_id ILIKE $${params.length})`);
+  }
+
+  return { params, where: where.length ? `WHERE ${where.join(' AND ')}` : '' };
+};
+
+export const AppointmentsRepo = {
+  async list({ dateFrom, dateTo, status, statuses, q, order, limit, offset }) {
+    const { params, where } = buildFilters({ dateFrom, dateTo, status, statuses, q });
+    const dir = String(order).toLowerCase() === 'desc' ? 'DESC' : 'ASC';
 
     params.push(limit, offset);
 
@@ -38,8 +54,8 @@ export const AppointmentsRepo = {
       FROM appointments a
       LEFT JOIN customers c ON c.id = a.customer_id
       LEFT JOIN users u ON u.id = a.advisor_id
-      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-      ORDER BY a.date ASC, a.time_start ASC
+      ${where}
+      ORDER BY a.date ${dir}, a.time_start ${dir}
       LIMIT $${params.length - 1} OFFSET $${params.length};
     `;
 
@@ -47,26 +63,35 @@ export const AppointmentsRepo = {
     return rows;
   },
 
-  async count({ dateFrom, dateTo, status }) {
-    const params = [];
-    const where = [];
+  async count({ dateFrom, dateTo, status, statuses, q }) {
+    const { params, where } = buildFilters({ dateFrom, dateTo, status, statuses, q });
 
-    if (dateFrom) {
-      params.push(dateFrom);
-      where.push(`date >= $${params.length}`);
-    }
-    if (dateTo) {
-      params.push(dateTo);
-      where.push(`date <= $${params.length}`);
-    }
-    if (status) {
-      params.push(status);
-      where.push(`status = $${params.length}`);
-    }
+    const sql = `
+      SELECT COUNT(*)::int AS total
+      FROM appointments a
+      LEFT JOIN customers c ON c.id = a.customer_id
+      ${where};
+    `;
 
-    const sql = `SELECT COUNT(*)::int AS total FROM appointments ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`;
     const { rows } = await pool.query(sql, params);
     return rows[0].total;
+  },
+
+  // Totales por status ignorando el filtro de status: alimenta los
+  // contadores de las pestañas, que deben verse aunque estés en la otra.
+  async countsByStatus({ dateFrom, dateTo, q }) {
+    const { params, where } = buildFilters({ dateFrom, dateTo, q });
+
+    const sql = `
+      SELECT a.status, COUNT(*)::int AS total
+      FROM appointments a
+      LEFT JOIN customers c ON c.id = a.customer_id
+      ${where}
+      GROUP BY a.status;
+    `;
+
+    const { rows } = await pool.query(sql, params);
+    return Object.fromEntries(rows.map(r => [r.status, r.total]));
   },
 
   async getById(id) {

@@ -6,14 +6,22 @@ import { ApiError } from '../utils/ApiError.js';
 export const AppointmentsService = {
   async list(req) {
     const { limit, offset, page, pageSize } = parsePagination(req);
-    const { dateFrom, dateTo, status } = req.query;
+    const { dateFrom, dateTo, status, statuses, q, order } = req.query;
 
-    const [items, total] = await Promise.all([
-      AppointmentsRepo.list({ dateFrom, dateTo, status, limit, offset }),
-      AppointmentsRepo.count({ dateFrom, dateTo, status })
+    // `statuses` llega como lista separada por comas: pending,confirmed,...
+    const statusList = statuses
+      ? String(statuses).split(',').map(s => s.trim()).filter(Boolean)
+      : undefined;
+
+    const filters = { dateFrom, dateTo, status, statuses: statusList, q };
+
+    const [items, total, counts] = await Promise.all([
+      AppointmentsRepo.list({ ...filters, order, limit, offset }),
+      AppointmentsRepo.count(filters),
+      AppointmentsRepo.countsByStatus({ dateFrom, dateTo, q })
     ]);
 
-    return { items, meta: { page, pageSize, total } };
+    return { items, meta: { page, pageSize, total, counts } };
   },
 
   async get(req) {

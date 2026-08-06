@@ -28,7 +28,6 @@ const ACTIVE_STATUSES = ["pending", "confirmed", "in_progress", "rescheduled"];
 const HISTORY_STATUSES = ["completed", "cancelled", "no_show"];
 
 export default function AppointmentsList() {
-  const { appointments,setAppointments, loading, error, reload } = useAppointments();
   const { showConfirm, showSnack } = useAlert();
   const { darkMode } = useTheme();
 
@@ -38,6 +37,22 @@ export default function AppointmentsList() {
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // 🔗 Filtros que viajan al backend. Orden descendente en ambas pestañas:
+  // la cita más nueva primero.
+  const query = useMemo(
+    () => ({
+      page,
+      pageSize: rowsPerPage,
+      statuses: (activeTab === "active" ? ACTIVE_STATUSES : HISTORY_STATUSES).join(","),
+      q: debouncedSearch || undefined,
+      order: "desc",
+    }),
+    [page, rowsPerPage, activeTab, debouncedSearch]
+  );
+
+  const { appointments, setAppointments, meta, loading, error, reload } =
+    useAppointments(query);
 
   // 🎨 Estilos
   const styles = useMemo(
@@ -62,35 +77,14 @@ export default function AppointmentsList() {
     [darkMode]
   );
 
-  // 📊 Calcular contadores de citas activas / historial
-  const { activeCount, historyCount } = useMemo(() => {
-    let active = 0;
-    let history = 0;
-    appointments.forEach((appt) => {
-      if (ACTIVE_STATUSES.includes(appt.status)) active++;
-      if (HISTORY_STATUSES.includes(appt.status)) history++;
-    });
-    return { activeCount: active, historyCount: history };
-  }, [appointments]);
+  // 📊 Contadores de pestañas: vienen del servidor sobre el total real,
+  // no sobre la página que se está viendo.
+  const sumCounts = (list) =>
+    list.reduce((n, status) => n + (meta.counts?.[status] || 0), 0);
+  const activeCount = sumCounts(ACTIVE_STATUSES);
+  const historyCount = sumCounts(HISTORY_STATUSES);
 
-  // 🔍 Filtrado y paginación optimizados
-  const paginatedAppointments = useMemo(() => {
-    const filtered = appointments.filter((appt) => {
-      const text = `${appt.customer_name} ${appt.whatsapp_id} ${appt.status}`.toLowerCase();
-      const matchesSearch = text.includes(debouncedSearch.toLowerCase());
-      const inTab =
-        activeTab === "active"
-          ? ACTIVE_STATUSES.includes(appt.status)
-          : HISTORY_STATUSES.includes(appt.status);
-      return matchesSearch && inTab;
-    });
-
-    const start = (page - 1) * rowsPerPage;
-    return {
-      total: filtered.length,
-      data: filtered.slice(start, start + rowsPerPage),
-    };
-  }, [appointments, debouncedSearch, page, rowsPerPage, activeTab]);
+  const totalPages = Math.max(1, Math.ceil(meta.total / rowsPerPage));
 
   // --- Acciones genéricas ---
   const updateStatus = useCallback(
@@ -249,7 +243,7 @@ export default function AppointmentsList() {
               </tr>
             ))}
 
-          {!loading && paginatedAppointments.data.length === 0 && (
+          {!loading && appointments.length === 0 && (
             <tr>
               <td
                 colSpan="6"
@@ -262,7 +256,7 @@ export default function AppointmentsList() {
           
 
           {!loading &&
-            paginatedAppointments.data.map((appt) => (
+            appointments.map((appt) => (
               <MemoAppointmentRow
                 key={appt.id}
                 appt={appt}
@@ -279,14 +273,14 @@ export default function AppointmentsList() {
 
       {/* === Vista Móvil (cards) === */}
       <div className="block divide-y divide-gray-200 md:hidden">
-        {!loading && paginatedAppointments.data.length === 0 && (
+        {!loading && appointments.length === 0 && (
           <p className="p-4 text-center text-sm text-gray-500">
             No hay citas {activeTab === "active" ? "activas" : "en historial"}
           </p>
         )}
 
         {!loading &&
-          paginatedAppointments.data.map((appt) => (
+          appointments.map((appt) => (
             <MemoAppointmentCard
               key={appt.id}
               appt={appt}
@@ -299,13 +293,7 @@ export default function AppointmentsList() {
           ))}
       </div>
 
-      <Pagination
-        page={page}
-        totalPages={Math.ceil(
-          paginatedAppointments.total / rowsPerPage || 1
-        )}
-        onChange={setPage}
-      />
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       <AppointmentForm
         open={!!editAppt}

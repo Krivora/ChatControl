@@ -1,6 +1,11 @@
 // src/api/customers.js
+import { api } from "./client";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; // <-- esto faltaba
+export const CustomersApi = {
+  get: (id) => api.get(`/customers/${id}`),
+  update: (id, payload) => api.put(`/customers/${id}`, payload),
+  rename: (id, full_name) => api.put(`/customers/${id}`, { full_name }),
+};
 
 // customers.js
 export const getTotalClientes = async () => {

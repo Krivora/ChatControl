@@ -19,7 +19,10 @@ export const AssignmentsService = {
       return await AssignmentsRepo.create(req.body);
     } catch (err) {
       if (err.message === "DUPLICATE_ASSIGNMENT") {
-        throw new ApiError(400, "Este usuario ya está asignado a la conversación");
+        throw new ApiError(409, "Este usuario ya está asignado a la conversación");
+      }
+      if (err.message === "ALREADY_ASSIGNED") {
+        throw new ApiError(409, "Esta conversación ya tiene un asesor asignado");
       }
       throw err;
     }

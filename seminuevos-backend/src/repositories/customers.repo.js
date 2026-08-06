@@ -56,6 +56,17 @@ export const CustomersRepo = {
       [id]
     );
     return rows[0] || null;
+  },
+
+  async update(id, { full_name }) {
+    const { rows } = await pool.query(
+      `UPDATE customers
+       SET full_name = COALESCE($2, full_name)
+       WHERE id = $1
+       RETURNING id, whatsapp_id, full_name, created_at, last_interaction`,
+      [id, full_name]
+    );
+    return rows[0] || null;
   }
 
 };

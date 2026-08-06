@@ -2,14 +2,20 @@ import { useState, useRef, useEffect } from "react";
 import { useWhatsApp } from "../../hooks/useWhatsapp";
 import { UsersApi } from "../../api/users";
 import { AssignmentsApi } from "../../api/assignments";
+import { CustomersApi } from "../../api/customers";
 import { useAlert } from "../../utils/alert";
-import { MessagesApi } from "../../api/messages";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ChatWindow({ chat, messages = [], darkMode }) {
   const [input, setInput] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [usersMessages, setUsersMessages] = useState([]);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  // Nombre local: refleja el rename al instante sin esperar a que el hook
+  // de la conversación vuelva a traer los datos.
+  const [customerName, setCustomerName] = useState("");
   const messagesEndRef = useRef(null);
   const { sendMessage, loading } = useWhatsApp();
   const { showSnack } = useAlert();
@@ -65,6 +71,13 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     fetchUsers();
   }, []);
 
+  // Al cambiar de conversación se resincroniza el nombre y se cierra la
+  // edición, para no arrastrar el borrador de un cliente a otro.
+  useEffect(() => {
+    setCustomerName(chat?.customer?.full_name || "");
+    setEditingName(false);
+  }, [chat?.customer?.id, chat?.customer?.full_name]);
+
   if (!chat) {
     return (
       <div className="flex flex-1 items-center justify-center text-gray-500 h-full">
@@ -107,34 +120,72 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     created_at: msg.created_at,
   }));
   const handleSend = async (messageToSend) => {
-    if (!messageToSend.trim()) return;
+    if (!messageToSend.trim()) return false;
 
     const to = chat.customer?.whatsapp_id;
+    const conversationId = chat.conversation?.id;
+
     if (!to) {
-      alert("Este cliente no tiene número de WhatsApp registrado");
+      showSnack("Este cliente no tiene número de WhatsApp registrado", "error");
+      return false;
+    }
+    if (!conversationId) {
+      showSnack("La conversación no tiene ID, no se puede enviar", "error");
+      return false;
+    }
+
+    // El backend registra el mensaje en `messages` al enviarlo, así que
+    // aquí no se vuelve a insertar.
+    const res = await sendMessage(to, messageToSend, conversationId);
+    if (!res.ok) {
+      showSnack(res.error || "No se pudo enviar el mensaje ❌", "error");
+      return false;
+    }
+
+    setInput("");
+    setShowModal(false);
+    return true;
+  };
+
+  const handleRename = async () => {
+    const nuevo = nameDraft.trim();
+
+    if (!nuevo) {
+      showSnack("El nombre no puede estar vacío", "warning");
+      return;
+    }
+    if (nuevo === customerName) {
+      setEditingName(false);
       return;
     }
 
-    const res = await sendMessage(to, messageToSend);
-    if (res.ok) {
-      await MessagesApi.create({
-        conversation_id: chat.conversation?.id,
-        content: messageToSend,
-        content_type: "text",
-      });
-
-      setInput("");
-      setShowModal(false);
+    setSavingName(true);
+    try {
+      const res = await CustomersApi.rename(chat.customer?.id, nuevo);
+      setCustomerName(res?.data?.full_name || nuevo);
+      setEditingName(false);
+      showSnack("Nombre actualizado ✅", "success");
+    } catch (err) {
+      console.error("Error al renombrar cliente:", err);
+      showSnack(err.message || "No se pudo actualizar el nombre ❌", "error");
+    } finally {
+      setSavingName(false);
     }
   };
 
   const handleAssign = async (userId, message) => {
     try {
       const existing = await AssignmentsApi.listByConversation(chat.conversation?.id);
-      const yaAsignado = existing.find((a) => a.user_id === userId && a.status === "active");
+      const asignacionActiva = existing.find((a) => a.status === "active");
 
-      if (yaAsignado) {
-        showSnack("⚠️ Este usuario ya está asignado a la conversación.", "warning");
+      // Una conversación solo puede tener un asesor a la vez.
+      if (asignacionActiva) {
+        showSnack(
+          asignacionActiva.user_id === userId
+            ? "⚠️ Este usuario ya está asignado a la conversación."
+            : "⚠️ Esta conversación ya tiene un asesor asignado.",
+          "warning"
+        );
         return;
       }
 
@@ -144,11 +195,16 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
         status: "active",
       });
 
-      const ok = await handleSend(message);
-      if (ok) showSnack("Usuario asignado y mensaje enviado 🎉", "success");
+      const enviado = await handleSend(message);
+      showSnack(
+        enviado
+          ? "Usuario asignado y mensaje enviado 🎉"
+          : "Usuario asignado, pero el mensaje no se pudo enviar ⚠️",
+        enviado ? "success" : "warning"
+      );
     } catch (err) {
       console.error("Error al asignar:", err);
-      showSnack("Ocurrió un error al asignar usuario ❌", "error");
+      showSnack(err.message || "Ocurrió un error al asignar usuario ❌", "error");
     }
   };
 
@@ -156,12 +212,57 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div
-        className={`p-4 border-b font-semibold flex-shrink-0 ${darkMode
+        className={`p-4 border-b font-semibold flex-shrink-0 flex items-center gap-2 ${darkMode
           ? "bg-[#1f1f1f] border-gray-700 text-white"
           : "bg-white border-gray-200 text-gray-900"
           }`}
       >
-        {chat.customer?.full_name || "Cliente"}
+        {editingName ? (
+          <>
+            <input
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRename();
+                if (e.key === "Escape") setEditingName(false);
+              }}
+              disabled={savingName}
+              className={`flex-1 rounded-lg px-2 py-1 text-sm font-normal outline-none border ${darkMode
+                ? "bg-[#2a2a2a] text-white border-gray-600"
+                : "bg-white text-gray-900 border-gray-300"
+                }`}
+            />
+            <button
+              onClick={handleRename}
+              disabled={savingName}
+              className="text-sm px-3 py-1 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] disabled:opacity-50"
+            >
+              {savingName ? "..." : "Guardar"}
+            </button>
+            <button
+              onClick={() => setEditingName(false)}
+              disabled={savingName}
+              className="text-sm px-2 py-1 text-gray-400 hover:text-gray-600"
+            >
+              Cancelar
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="flex-1 truncate">{customerName || "Cliente"}</span>
+            <button
+              onClick={() => {
+                setNameDraft(customerName || "");
+                setEditingName(true);
+              }}
+              title="Cambiar nombre"
+              className="text-sm font-normal text-gray-400 hover:text-[#960b2b]"
+            >
+              ✏️
+            </button>
+          </>
+        )}
       </div>
 
       {/* Mensajes */}

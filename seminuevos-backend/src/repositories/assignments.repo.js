@@ -14,6 +14,7 @@ async listAll() {
         a.status,
         a.status_assignment,
         a.assigned_at,
+        cu.id AS customer_id,
         cu.full_name AS customer_name,
         cu.whatsapp_id,
         COALESCE(json_agg(
@@ -24,7 +25,7 @@ async listAll() {
       LEFT JOIN customers cu ON cu.id = c.customer_id
       LEFT JOIN answers ans ON ans.conversation_id = c.id
       LEFT JOIN users u ON u.id = a.user_id
-      GROUP BY a.id, cu.full_name, cu.whatsapp_id, u.id
+      GROUP BY a.id, cu.id, cu.full_name, cu.whatsapp_id, u.id
       ORDER BY a.assigned_at DESC
     `);
     return rows;
@@ -58,14 +59,19 @@ async listAll() {
   // Crear una nueva asignación
   async create({ conversation_id, user_id }) {
 
-    // Validar duplicados
+    // Una conversación solo puede tener un asesor activo a la vez.
     const { rows: existing } = await pool.query(
-      `SELECT id FROM assignments WHERE conversation_id = $1 AND user_id = $2`,
-      [conversation_id, user_id]
+      `SELECT id, user_id FROM assignments
+       WHERE conversation_id = $1 AND status = 'active'`,
+      [conversation_id]
     );
 
     if (existing.length > 0) {
-      throw new Error("DUPLICATE_ASSIGNMENT");
+      throw new Error(
+        existing.some(a => a.user_id === user_id)
+          ? "DUPLICATE_ASSIGNMENT"
+          : "ALREADY_ASSIGNED"
+      );
     }
 
     const { rows } = await pool.query(
@@ -117,6 +123,7 @@ async listAll() {
         a.status,
         a.status_assignment,
         a.assigned_at,
+        cu.id AS customer_id,
         cu.full_name AS customer_name,
         cu.whatsapp_id,
         COALESCE(json_agg(
@@ -128,7 +135,7 @@ async listAll() {
       LEFT JOIN answers ans ON ans.conversation_id = c.id
       LEFT JOIN users u ON u.id = a.user_id
       WHERE a.status = 'active' AND a.user_id = $1
-      GROUP BY a.id, cu.full_name, cu.whatsapp_id, u.id
+      GROUP BY a.id, cu.id, cu.full_name, cu.whatsapp_id, u.id
       ORDER BY a.assigned_at DESC
     `, [userId]);
     return rows;

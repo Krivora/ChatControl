@@ -5,6 +5,9 @@ import { useAuth } from "../../context/AuthContext"; // 👈 import
 import { Skeleton } from "@mui/material";
 import TableFilters from "../common/TableFilters";
 import Pagination from "../common/TablePagination";
+import { formatDateTime } from "../../utils/datetime";
+import { CustomersApi } from "../../api/customers";
+import { useAlert } from "../../utils/alert";
 
 // Mapeos de puntos
 const ponderacionMap = {
@@ -46,9 +49,43 @@ const scoreRanges = [
 export default function AssignmentTableFull({ assignments = [], users = [], loading, onEdit, onOpenChat }) {
   const { darkMode } = useTheme();
   const { user } = useAuth(); // 👈 usuario loggeado
+  const { showSnack } = useAlert();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Edición del nombre del cliente desde la tabla
+  const [editingId, setEditingId] = useState(null);   // customer_id en edición
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  // Nombres ya guardados, para pintarlos sin esperar la siguiente recarga
+  const [renamed, setRenamed] = useState({});
+
+  const startRename = (a) => {
+    setEditingId(a.customer_id);
+    setNameDraft(renamed[a.customer_id] ?? a.customer_name ?? "");
+  };
+
+  const saveRename = async (customerId) => {
+    const nuevo = nameDraft.trim();
+    if (!nuevo) {
+      showSnack("El nombre no puede estar vacío", "warning");
+      return;
+    }
+
+    setSavingName(true);
+    try {
+      const res = await CustomersApi.rename(customerId, nuevo);
+      setRenamed((prev) => ({ ...prev, [customerId]: res?.data?.full_name || nuevo }));
+      setEditingId(null);
+      showSnack("Nombre actualizado ✅", "success");
+    } catch (err) {
+      console.error("Error al renombrar cliente:", err);
+      showSnack(err.message || "No se pudo actualizar el nombre ❌", "error");
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const formatPhone = (phone) => {
     if (!phone) return "-";
@@ -92,11 +129,12 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
             }`}
           >
             <tr>
-              <th className="px-6 py-3">Nombre</th>
-              <th className="px-6 py-3">Apellido</th>
-              <th className="px-6 py-3">Email</th>
+              <th className="px-6 py-3">Cliente</th>
               <th className="px-6 py-3">Teléfono</th>
-              <th className="px-6 py-3">Género</th>
+              <th className="px-6 py-3">Estado</th>
+              <th className="px-6 py-3">Score</th>
+              <th className="px-6 py-3">Asesor</th>
+              <th className="px-6 py-3">Fecha Creada</th>
               <th className="px-6 py-3 text-right">Acciones</th>
             </tr>
           </thead>
@@ -117,6 +155,9 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
                 </td>
                 <td className="px-6 py-4">
                   <Skeleton variant="text" width={80} animation="wave" />
+                </td>
+                <td className="px-6 py-4">
+                  <Skeleton variant="text" width={110} animation="wave" />
                 </td>
                 <td className="px-6 py-4 text-right">
                   <Skeleton variant="circular" width={28} height={28} animation="wave" />
@@ -148,6 +189,7 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
             <th className="px-6 py-3">Estado</th>
             <th className="px-6 py-3">Score</th>
             <th className="px-6 py-3">Asesor</th>
+            <th className="px-6 py-3">Fecha Creada</th>
             <th className="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
@@ -164,7 +206,52 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
 
             return (
               <tr key={a.id} className={`hover:${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"}`}>
-                <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{a.customer_name || "Sin cliente"}</td>
+                <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>
+                  {editingId && editingId === a.customer_id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveRename(a.customer_id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        disabled={savingName}
+                        className={`w-36 rounded px-2 py-1 text-sm outline-none border ${darkMode
+                          ? "bg-[#2a2a2a] text-white border-gray-600"
+                          : "bg-white text-gray-900 border-gray-300"}`}
+                      />
+                      <button
+                        onClick={() => saveRename(a.customer_id)}
+                        disabled={savingName}
+                        className="text-xs px-2 py-1 rounded bg-[#960b2b] text-white disabled:opacity-50"
+                      >
+                        {savingName ? "..." : "OK"}
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        disabled={savingName}
+                        className="text-xs px-1 text-gray-400 hover:text-gray-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span>{renamed[a.customer_id] ?? a.customer_name ?? "Sin cliente"}</span>
+                      {a.customer_id && (
+                        <button
+                          onClick={() => startRename(a)}
+                          title="Cambiar nombre"
+                          className="text-xs text-gray-400 hover:text-[#960b2b] opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{formatPhone(a.whatsapp_id)}</td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-600 px-6 py-4"}>{a.status_assignment || "-"}</td>
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-600 px-6 py-4"}>
@@ -178,6 +265,9 @@ export default function AssignmentTableFull({ assignments = [], users = [], load
                 </td>
 
                 <td className={darkMode ? "text-gray-300 px-6 py-4" : "text-gray-700 px-6 py-4"}>{a.user_nombre ? `${a.user_nombre} ${a.user_apellido}` : "-"}</td>
+                <td className={`whitespace-nowrap ${darkMode ? "text-gray-300 px-6 py-4" : "text-gray-600 px-6 py-4"}`}>
+                  {formatDateTime(a.assigned_at, "-")}
+                </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     <button onClick={() => onEdit(a)} className={actionBtn}><Edit fontSize="small" /></button>

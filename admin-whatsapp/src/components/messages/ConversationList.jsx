@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDateTime } from "../../utils/datetime";
 
 function normalize(str) {
   if (!str) return "";
@@ -78,33 +79,8 @@ export default function ConversationList({ conversations = [], onSelect, selecte
 
           const lastMessage = conv.last_message || "Sin mensajes aún";
 
-          // ---------------------
-          // Hora con ajuste manual
-          // ---------------------
-          let lastMessageTime = "Hora desconocida";
-          if (conv.last_message_time) {
-            const dateISO = conv.last_message_time.replace(" ", "T").split(".")[0];
-            const d = new Date(dateISO);
-
-            if (!isNaN(d.getTime())) {
-              // ⚙️ Ajuste horario (mantén tu valor actual)
-              d.setHours(d.getHours() - 14);
-
-              const hora = d.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              });
-
-              const dia = d.toLocaleDateString("es-MX", {
-                day: "numeric",
-                month: "short",
-              });
-
-              // 👇 Hora seguida del día (fácil de leer)
-              lastMessageTime = `${hora} — ${dia}`;
-            }
-          }
+          // Hora + día, compartido con la tabla de asignaciones
+          const lastMessageTime = formatDateTime(conv.last_message_time);
 
           return (
             <div
