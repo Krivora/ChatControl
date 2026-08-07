@@ -35,8 +35,11 @@ export function useConversationDetail(conversationId) {
   useEffect(() => {
     if (!conversationId) return;
 
-    // 🔌 Conecta al backend de sockets (ajusta si usas dominio distinto)
-    const socket = io(`${BASE}`); // o tu dominio
+    // 🔌 Sin argumento se conecta al mismo origen y al namespace por defecto.
+    // Ojo: NO pasar `${BASE}` aquí — socket.io interpreta "/api" como
+    // namespace, no como URL, y nunca llegarían los eventos.
+    // En desarrollo se apunta al backend con VITE_SOCKET_URL.
+    const socket = io(import.meta.env.VITE_SOCKET_URL || undefined);
     socketRef.current = socket;
 
     // 🔊 Unirse al canal de esta conversación
