@@ -4,6 +4,7 @@ import ThemeToggle from "./ThemeToggle";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AccountCircle, Logout, ExpandMore } from "@mui/icons-material";
+import MenuIcon from "@mui/icons-material/Menu";
 
 // Título de la página según la ruta activa.
 const PAGE_TITLES = [
@@ -22,7 +23,7 @@ const roleLabels = {
   usuario: "Asesor",
 };
 
-export default function Navbar() {
+export default function Navbar({ onMenu }) {
   const { darkMode } = useTheme();
   const { user, logoutUser } = useAuth();
   const navigate = useNavigate();
@@ -52,8 +53,19 @@ export default function Navbar() {
           : "bg-white border-gray-200"
       }`}
     >
-      {/* Título de la sección */}
-      <div className="min-w-0">
+      {/* Menú móvil + título de la sección */}
+      <div className="flex items-center gap-2 min-w-0">
+        <button
+          onClick={onMenu}
+          aria-label="Abrir menú"
+          className={`md:hidden w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg ${
+            darkMode ? "text-gray-300 hover:bg-[#1f1f1f]" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <MenuIcon fontSize="small" />
+        </button>
+
+        <div className="min-w-0">
         <h1
           className={`font-semibold leading-tight truncate ${
             darkMode ? "text-white" : "text-gray-900"
@@ -66,6 +78,7 @@ export default function Navbar() {
             {page.subtitle}
           </p>
         )}
+        </div>
       </div>
 
       <div className="flex items-center gap-1">

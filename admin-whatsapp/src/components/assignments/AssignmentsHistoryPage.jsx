@@ -73,7 +73,7 @@ export default function AssignmentsHistoryPage() {
   );
 
   return (
-    <div className={`p-6 h-[calc(100vh-120px)] ${darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"}`}>
+    <div className={`p-6 h-full min-h-0 ${darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"}`}>
       <h1 className="text-2xl font-semibold mb-4">Histórico de Asignaciones</h1>
 
       {/* Tabla con buscador y paginación */}

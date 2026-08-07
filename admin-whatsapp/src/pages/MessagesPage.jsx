@@ -35,7 +35,7 @@ export default function MessagesPage() {
     : "bg-white border-gray-200";
   return (
     <div
-      className={`flex h-[calc(100vh-120px)] overflow-hidden ${
+      className={`flex h-full min-h-0 overflow-hidden ${
         darkMode ? "bg-[#121212]" : "bg-gray-100"
       }`}
     >

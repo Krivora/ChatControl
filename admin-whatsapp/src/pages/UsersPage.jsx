@@ -66,7 +66,7 @@ export default function UsersPage() {
 
   return (
     <div
-      className={`p-6 h-[calc(100vh-120px)] ${
+      className={`p-6 h-full min-h-0 ${
         darkMode ? "bg-[#121212] text-gray-100" : "bg-gray-50 text-gray-900"
       }`}
     >

@@ -26,9 +26,11 @@ export default function Login({ darkMode }) {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "100vh",
+    height: "100dvh",
     backgroundColor: darkMode ? "#121212" : "#f0f2f5",
-    padding: "20px",
+    // Áreas seguras para la isla dinámica y el indicador de inicio del iPhone
+    padding:
+      "calc(20px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left))",
     fontFamily: "'Roboto', sans-serif",
   };
 

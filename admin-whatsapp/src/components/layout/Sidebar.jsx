@@ -12,7 +12,12 @@ import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
-export default function Sidebar({ isOpen, setIsOpen }) {
+export default function Sidebar({
+  isOpen,
+  setIsOpen,
+  showCollapse = true,
+  onNavigate,
+}) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const { darkMode } = useTheme();
   const { user } = useAuth(); // 👈 obtenemos el usuario
@@ -58,7 +63,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
   return (
     <aside
-      className={`relative flex flex-col min-h-screen border-r transition-all duration-300
+      className={`relative flex flex-col h-full border-r transition-all duration-300
         ${sidebarWidth}
         ${darkMode
           ? "bg-[#161616] border-gray-800 text-gray-300"
@@ -101,6 +106,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           <NavLink
             key={item.id}
             to={item.path}
+            onClick={onNavigate}
             title={!isOpen ? item.label : undefined}
             className={({ isActive }) =>
               `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
@@ -129,8 +135,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         ))}
       </nav>
 
-      {/* Colapsar */}
-      <div className="p-2">
+      {/* Colapsar — en el cajón móvil no aplica */}
+      <div className={`p-2 ${showCollapse ? "" : "hidden"}`}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           title={isOpen ? "Contraer menú" : "Expandir menú"}

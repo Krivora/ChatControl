@@ -409,9 +409,9 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
               <button
                 onClick={() => setShowModal(true)}
                 disabled={loading}
-                className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#960b2b] text-white text-sm font-medium hover:bg-[#7d0923] disabled:opacity-50 transition"
+                className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#960b2b] text-white text-sm font-medium hover:bg-[#7d0923] disabled:opacity-50 transition whitespace-nowrap"
               >
-                Asignar asesor
+                Asignar<span className="hidden sm:inline"> asesor</span>
               </button>
             )
           )}
