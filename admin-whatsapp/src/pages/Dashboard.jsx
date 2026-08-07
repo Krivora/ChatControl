@@ -5,7 +5,12 @@ import StatCard from "../components/dashboard/StatCard";
 import WeeklyChart from "../components/dashboard/WeeklyChart";
 import { useTheme } from "../context/ThemeContext";
 import { UsersApi } from "../api/users";
-import { AppointmentsApi } from "../api/appointments"; 
+import { AppointmentsApi } from "../api/appointments";
+import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
+import CreditScoreOutlinedIcon from "@mui/icons-material/CreditScoreOutlined";
+import { calculatePoints, getRange, initials, MAX_SCORE } from "../utils/scoring";
 
 // Citas que siguen "vivas": las canceladas, completadas y no-show no cuentan
 // como próximas.
@@ -118,63 +123,23 @@ export default function Dashboard() {
     const activas = conversations.filter(c => c.status === "active");
     setTotalConversacionesActivas(activas.length);
 
-    const ponderacionMap = {
-      down_payment_max: [
-        { label: "$30,000 – $50,000", points: 15 },
-        { label: "$50,000 – $70,000", points: 15 },
-        { label: "$70,000 – $100,000", points: 20 },
-        { label: "$100,000 – $200,000", points: 25 },
-        { label: "$200,000 o más", points: 25 },
-      ],
-      max_monthly_payment: [
-        { label: "$4,000 – $5,500", points: 25 },
-        { label: "$5,500 – $7,000", points: 25 },
-        { label: "$7,000 – $9,000", points: 25 },
-        { label: "$9,000 o más", points: 25 },
-      ],
-      credit_bureau_status: [
-        { label: "mal", points: 5 },
-        { label: "regular", points: 15 },
-        { label: "bien", points: 30 },
-        { label: "excelente", points: 50 },
-      ],
-      time_to_buy: [
-        { label: "Ya estoy listo", points: 70 },
-        { label: "De 1 a 15 días", points: 15 },
-        { label: "De 15 a 30 días", points: 10 },
-        { label: "Más de 30 días", points: 5 },
-      ],
-    };
-
-    const normalize = str =>
-      !str ? "" : String(str).toLowerCase().replace(/\s/g, "").replace(/,/g, "").replace(/\$/g, "").replace(/–|-/g, "-");
-
-    const calculatePoints = (answers = []) =>
-      answers.reduce((sum, a) => {
-        const key = a.question_key ?? a.question?.key ?? "";
-        const answerValue = a.answer_value ?? a.value ?? a.answer ?? "";
-        const options = ponderacionMap[key] || [];
-        const matchedOption = options.find(opt => normalize(opt.label) === normalize(answerValue));
-        return sum + (matchedOption?.points || 0);
-      }, 0);
-
-    const scoreRanges = [
-      { min: 0, max: 50, color: "bg-red-500", label: "Malo" },
-      { min: 51, max: 100, color: "bg-yellow-400", label: "Regular" },
-      { min: 101, max: 140, color: "bg-green-400", label: "Bien" },
-      { min: 141, max: 170, color: "bg-sky-300", label: "Excelente" },
-    ];
-    const getRange = totalPoints => scoreRanges.find(r => totalPoints >= r.min && totalPoints <= r.max) || { label: "Malo", color: "bg-red-500" };
+    // Las respuestas llegan con nombres distintos según el endpoint; se
+    // normalizan antes de puntuar con la tabla compartida.
+    const toAnswer = (a) => ({
+      question_key: a.question_key ?? a.question?.key ?? "",
+      answer_value: a.answer_value ?? a.value ?? a.answer ?? "",
+    });
 
     const profiles = conversations.map(conv => {
-      const points = calculatePoints(conv.answers || []);
+      const points = calculatePoints((conv.answers || []).map(toAnswer));
       const range = getRange(points);
       return {
         id: conv.id,
         name: conv.customer_name || conv.customer?.full_name || "Sin nombre",
         points,
         label: range.label,
-        color: range.color,
+        bar: range.bar,
+        chip: range.chip,
       };
     });
     setTopProfiles(profiles);
@@ -245,8 +210,12 @@ export default function Dashboard() {
 
     // `customer_name` ya viene resuelto por el backend; buscarlo en la lista
     // de customers fallaba porque esa también llega paginada.
-    const formatAppointment = (appt) =>
-      `${appt.customer_name || "Sin nombre"}\n${toLocalDay(appt.date)} ${appt.time_start}`;
+    const formatAppointment = (appt) => ({
+      id: appt.id,
+      name: appt.customer_name || "Sin nombre",
+      day: toLocalDay(appt.date),
+      time: String(appt.time_start || "").slice(0, 5),
+    });
 
     const key = (a) => `${toLocalDay(a.date)} ${a.time_start}`;
     const sorted = [...appointments].sort((a, b) => key(a).localeCompare(key(b)));
@@ -260,116 +229,158 @@ export default function Dashboard() {
     );
   }, [appointments]);
 
+  const emptyState = (texto) => (
+    <div className="flex-1 flex items-center justify-center py-8 text-sm text-gray-400">
+      {texto}
+    </div>
+  );
+
+  const rowHover = darkMode ? "hover:bg-[#242424]" : "hover:bg-gray-50";
+
+  const AppointmentItem = ({ appt }) => (
+    <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
+      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#960b2b]/10 border border-[#960b2b]/20 flex items-center justify-center text-xs font-bold text-[#960b2b]">
+        {appt.time}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium truncate">{appt.name}</p>
+        <p className="text-xs text-gray-400">{appt.day}</p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className={`min-h-screen p-5 ${darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"}`}>
-      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5`}>
-        <StatCard title="Total de clientes esta semana" value={totalClientesSemana} darkMode={darkMode}>
-          <div className="text-xs mt-1 text-center opacity-80">
-            Periodo: {weekRange.start} a {weekRange.end}
-          </div>
-        </StatCard>
-        <StatCard title="Conversaciones Completadas" value={totalConversaciones} darkMode={darkMode} />
-        <StatCard title="Conversaciones Pendientes" value={totalConversacionesActivas} darkMode={darkMode} />
-        <StatCard title="Créditos ingresados" darkMode={darkMode} />
+    <div className="space-y-4">
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
+          label="Clientes esta semana"
+          value={totalClientesSemana}
+          hint={weekRange.start ? `${weekRange.start} a ${weekRange.end}` : undefined}
+          icon={<GroupsOutlinedIcon fontSize="small" />}
+          darkMode={darkMode}
+        />
+        <StatCard
+          label="Conversaciones completadas"
+          value={totalConversaciones}
+          icon={<TaskAltOutlinedIcon fontSize="small" />}
+          darkMode={darkMode}
+        />
+        <StatCard
+          label="Conversaciones pendientes"
+          value={totalConversacionesActivas}
+          icon={<ForumOutlinedIcon fontSize="small" />}
+          darkMode={darkMode}
+        />
+        <StatCard
+          label="Créditos ingresados"
+          value={null}
+          hint="Sin datos aún"
+          icon={<CreditScoreOutlinedIcon fontSize="small" />}
+          darkMode={darkMode}
+        />
       </div>
 
-      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5 mb-5`}>
-        <div className="flex-1 flex flex-col">
-          <StatCard title="Mejores Perfilamientos" darkMode={darkMode} className="flex-1 flex flex-col">
-            {topProfiles.length === 0 ? (
-              <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
-                No hay perfilamientos
-              </div>
-            ) : (
-              <div
-                className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}
-              >
+      {/* Perfilamientos + gráfica */}
+      <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+        <StatCard
+          title="Mejores perfilamientos"
+          darkMode={darkMode}
+          className="min-h-[300px]"
+        >
+          {topProfiles.filter(p => p.label === "Bien" || p.label === "Excelente").length === 0
+            ? emptyState("No hay perfilamientos")
+            : (
+              <div className="flex flex-col gap-0.5 max-h-[260px] overflow-y-auto scrollbar-hidden">
                 {topProfiles
                   .filter(p => p.label === "Bien" || p.label === "Excelente")
                   .sort((a, b) => b.points - a.points)
-                  .map((p, idx) => (
-                    <div
-                      key={idx}
+                  .map((p) => (
+                    <button
+                      key={p.id}
                       onClick={() => navigate("/messages", { state: { conversationId: p.id } })}
-                      className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                        darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
-                      }`}
+                      className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${rowHover}`}
                     >
-                      <span className="font-medium truncate">{p.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-white text-xs font-semibold ${p.color}`}>
-                          {p.points} pts
-                        </span>
-                        <span className="text-xs opacity-70">{p.label}</span>
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#960b2b] flex items-center justify-center text-white text-[10px] font-semibold">
+                        {initials(p.name)}
                       </div>
-                    </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className={`h-1.5 flex-1 rounded-full overflow-hidden ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}>
+                            <div
+                              className={`h-full rounded-full ${p.bar}`}
+                              style={{ width: `${Math.min(100, (p.points / MAX_SCORE) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] text-gray-400 flex-shrink-0">{p.points} pts</span>
+                        </div>
+                      </div>
+
+                      <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${p.chip}`}>
+                        {p.label}
+                      </span>
+                    </button>
                   ))}
               </div>
             )}
-          </StatCard>
-        </div>
+        </StatCard>
 
-        <div className="flex-1">
-          <WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
-        </div>
+        <WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
       </div>
 
-      <div className={`flex ${isMobile ? "flex-col" : "flex-row"} gap-5`}>
-        <StatCard title="Colaboradores" darkMode={darkMode} className="flex-1 flex flex-col">
-          {users.length === 0 ? (
-            <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
-              No hay colaboradores
-            </div>
-          ) : (
-            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}>
-              {users.map((u) => (
-                <div
-                  key={u.id}
-                  onClick={() => navigate("/users")}
-                  className={`flex justify-between items-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                    darkMode ? "hover:bg-[#3a3a3a]" : "hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="font-medium truncate">{u.nombre} {u.apellido}</span>
-                  <span className="text-xs opacity-70">{u.email}</span>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Colaboradores + citas */}
+      <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
+        <StatCard title="Colaboradores" darkMode={darkMode} className="min-h-[240px]">
+          {users.length === 0
+            ? emptyState("No hay colaboradores")
+            : (
+              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto scrollbar-hidden">
+                {users.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => navigate("/users")}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${rowHover}`}
+                  >
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold ${
+                      darkMode ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-200 text-gray-600"
+                    }`}>
+                      {initials(`${u.nombre} ${u.apellido}`)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{u.nombre} {u.apellido}</p>
+                      <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
         </StatCard>
 
-        <StatCard title="Citas de hoy" darkMode={darkMode} className="flex-1 flex flex-col">
-          {todayAppointments.length === 0 ? (
-            <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
-              No hay citas hoy
-            </div>
-          ) : (
-            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}>
-              {todayAppointments.map((appt, i) => (
-                <div key={i} className="flex justify-between items-center px-3 py-2 rounded-md">
-                  {appt}
-                </div>
-              ))}
-            </div>
-          )}
+        <StatCard title="Citas de hoy" darkMode={darkMode} className="min-h-[240px]">
+          {todayAppointments.length === 0
+            ? emptyState("No hay citas hoy")
+            : (
+              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto scrollbar-hidden">
+                {todayAppointments.map((appt) => (
+                  <AppointmentItem key={appt.id} appt={appt} />
+                ))}
+              </div>
+            )}
         </StatCard>
 
-        <StatCard title="Próximas citas" darkMode={darkMode} className="flex-1 flex flex-col">
-          {upcomingAppointments.length === 0 ? (
-            <div className="text-sm opacity-70 text-center flex-1 flex items-center justify-center">
-              No hay próximas citas
-            </div>
-          ) : (
-            <div className={`flex flex-col gap-1 p-2 rounded-md ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-50"} flex-1 overflow-auto`}>
-              {upcomingAppointments.map((appt, i) => (
-                <div key={i} className="flex justify-between items-center px-3 py-2 rounded-md">
-                  {appt}
-                </div>
-              ))}
-            </div>
-          )}
+        <StatCard title="Próximas citas" darkMode={darkMode} className="min-h-[240px]">
+          {upcomingAppointments.length === 0
+            ? emptyState("No hay próximas citas")
+            : (
+              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto scrollbar-hidden">
+                {upcomingAppointments.map((appt) => (
+                  <AppointmentItem key={appt.id} appt={appt} />
+                ))}
+              </div>
+            )}
         </StatCard>
-        <StatCard title="Resumen Semanal" darkMode={darkMode} />
       </div>
     </div>
   );

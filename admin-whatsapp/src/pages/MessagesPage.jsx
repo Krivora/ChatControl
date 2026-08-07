@@ -3,6 +3,9 @@ import { useLocation } from "react-router-dom";
 import ConversationList from "../components/messages/ConversationList";
 import ChatWindow from "../components/messages/ChatWindow";
 import CustomerInfo from "../components/messages/CustomerInfo";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useTheme } from "../context/ThemeContext";
 import { useConversations } from "../hooks/useConversations";
 import { useConversationDetail } from "../hooks/useConversationsMessages";
@@ -17,14 +20,19 @@ export default function MessagesPage() {
   useEffect(() => {
     if (location.state?.conversationId) {
       setSelectedId(location.state.conversationId);
-      if (window.innerWidth < 640) setMobileView("chat");
+      if (window.innerWidth < 768) setMobileView("chat");
     }
   }, [location.state]);
 
   const handleSelectConversation = (id) => {
     setSelectedId(id);
-    if (window.innerWidth < 640) setMobileView("chat");
+    if (window.innerWidth < 768) setMobileView("chat");
   };
+
+  // Barra de navegación de las vistas móviles
+  const bar = darkMode
+    ? "bg-[#1f1f1f] border-gray-800"
+    : "bg-white border-gray-200";
   return (
     <div
       className={`flex h-[calc(100vh-120px)] overflow-hidden ${
@@ -32,9 +40,9 @@ export default function MessagesPage() {
       }`}
     >
       {/* 🖥️ Desktop / Tablet */}
-      <div className="hidden sm:flex flex-1">
+      <div className="hidden md:flex flex-1">
         {/* Lista de conversaciones */}
-        <div className="flex-shrink-0" style={{ width: 300 }}>
+        <div className="flex-shrink-0" style={{ width: 340 }}>
           <ConversationList
             conversations={conversations}
             loading={loadingConvs}
@@ -54,14 +62,27 @@ export default function MessagesPage() {
               darkMode={darkMode}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-gray-500">
-              Selecciona una conversación
+            <div
+              className={`flex h-full flex-col items-center justify-center gap-3 ${
+                darkMode ? "bg-[#161616]" : "bg-gray-50"
+              }`}
+            >
+              <div
+                className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                  darkMode ? "bg-[#2a2a2a] text-gray-500" : "bg-gray-200 text-gray-400"
+                }`}
+              >
+                <ForumOutlinedIcon fontSize="large" />
+              </div>
+              <p className="text-gray-500 text-sm">
+                Selecciona una conversación para empezar
+              </p>
             </div>
           )}
         </div>
 
         {/* Información del cliente */}
-        <div className="flex-shrink-0" style={{ width: 240 }}>
+        <div className="flex-shrink-0" style={{ width: 300 }}>
           {selectedId && chat && (
             <CustomerInfo
               chat={chat}
@@ -73,7 +94,7 @@ export default function MessagesPage() {
       </div>
 
       {/* 📱 Mobile */}
-      <div className="flex-1 sm:hidden relative">
+      <div className="flex-1 md:hidden relative">
         {mobileView === "list" && (
           <ConversationList
             conversations={conversations}
@@ -85,59 +106,63 @@ export default function MessagesPage() {
         )}
 
         {mobileView === "chat" && (
-          <div className="h-full flex flex-col">
-            <div className="p-2 border-b flex items-center">
+          <div className="h-full flex flex-col min-h-0">
+            <div className={`px-3 h-12 flex-shrink-0 flex items-center justify-between border-b ${bar}`}>
               <button
                 onClick={() => setMobileView("list")}
-                className="flex items-center gap-1 text-[#960b2b] font-semibold"
+                className="flex items-center gap-1 text-[#960b2b] font-medium text-sm"
               >
-                <span className="text-lg">←</span> Conversaciones
+                <ArrowBackIcon fontSize="small" /> Conversaciones
               </button>
-            </div>
-            {selectedId ? (
-              <ChatWindow
-                chat={chat}
-                messages={messages}
-                loading={loadingChat}
-                darkMode={darkMode}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-gray-500">
-                Selecciona una conversación
-              </div>
-            )}
-            <div className="p-3 border-t flex justify-center bg-white">
               <button
                 onClick={() => setMobileView("info")}
-                className="px-4 py-2 rounded-full bg-[#960b2b] text-white font-medium shadow-md hover:bg-[#7a0923] transition"
+                title="Información del cliente"
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#960b2b]"
               >
-                Ver información del cliente
+                <InfoOutlinedIcon fontSize="small" />
               </button>
+            </div>
+
+            <div className="flex-1 min-h-0">
+              {selectedId ? (
+                <ChatWindow
+                  chat={chat}
+                  messages={messages}
+                  loading={loadingChat}
+                  darkMode={darkMode}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                  Selecciona una conversación
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {mobileView === "info" && (
-          <div className="h-full flex flex-col">
-            <div className="p-2 border-b">
+          <div className="h-full flex flex-col min-h-0">
+            <div className={`px-3 h-12 flex-shrink-0 flex items-center border-b ${bar}`}>
               <button
                 onClick={() => setMobileView("chat")}
-                className="text-[#960b2b] font-semibold"
+                className="flex items-center gap-1 text-[#960b2b] font-medium text-sm"
               >
-                ← Volver
+                <ArrowBackIcon fontSize="small" /> Volver al chat
               </button>
             </div>
-            {selectedId && chat ? (
-              <CustomerInfo
-                chat={chat}
-                messages={messages}
-                darkMode={darkMode}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-gray-500">
-                Cargando información...
-              </div>
-            )}
+            <div className="flex-1 min-h-0">
+              {selectedId && chat ? (
+                <CustomerInfo
+                  chat={chat}
+                  messages={messages}
+                  darkMode={darkMode}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                  Cargando información...
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

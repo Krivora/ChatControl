@@ -10,16 +10,44 @@ import AppointmentForm from "./AppointmentForm";
 import { AppointmentsApi } from "../../api/appointments";
 import { useAlert } from "../../utils/alert";
 import { Skeleton } from "@mui/material";
+import { toISODate } from "../../utils/datetime";
 
 const CALENDAR_PLUGINS = [timeGridPlugin, dayGridPlugin, interactionPlugin];
 const DAY_HEADER_FORMAT = { weekday: "short", day: "numeric" };
 
+// Clases estáticas: Tailwind no puede detectar nombres construidos con
+// plantillas (`bg-${color}-100`), así que esas clases nunca se generaban y
+// los eventos salían sin color.
+const STATUS_STYLES = {
+  pending:     { text: "Pendiente",    dot: "bg-yellow-500", border: "border-l-yellow-400", chip: "bg-yellow-100 text-yellow-700" },
+  confirmed:   { text: "Confirmada",   dot: "bg-green-500",  border: "border-l-green-500",  chip: "bg-green-100 text-green-700" },
+  in_progress: { text: "En curso",     dot: "bg-blue-500",   border: "border-l-blue-500",   chip: "bg-blue-100 text-blue-700" },
+  completed:   { text: "Completada",   dot: "bg-gray-400",   border: "border-l-gray-400",   chip: "bg-gray-100 text-gray-600" },
+  rescheduled: { text: "Reprogramada", dot: "bg-purple-500", border: "border-l-purple-500", chip: "bg-purple-100 text-purple-700" },
+  cancelled:   { text: "Cancelada",    dot: "bg-red-500",    border: "border-l-red-500",    chip: "bg-red-100 text-red-700" },
+  no_show:     { text: "No asistió",   dot: "bg-orange-500", border: "border-l-orange-500", chip: "bg-orange-100 text-orange-700" },
+};
+
 export default function AppointmentsCalendar() {
   const { darkMode } = useTheme();
-  const { appointments,setAppointments, loading, error, reload } = useAppointments();
   const calendarRef = useRef(null);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Solo se piden las citas alrededor del mes visible: sin filtros, el
+  // backend devolvía las 20 más antiguas y el calendario salía vacío.
+  const query = useMemo(() => {
+    const d = currentDate || new Date();
+    return {
+      dateFrom: toISODate(new Date(d.getFullYear(), d.getMonth() - 1, 1)),
+      dateTo: toISODate(new Date(d.getFullYear(), d.getMonth() + 2, 0)),
+      order: "asc",
+      pageSize: 100,
+    };
+  }, [currentDate]);
+
+  const { appointments, setAppointments, loading, error } = useAppointments(query);
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [editAppt, setEditAppt] = useState(null);
@@ -75,45 +103,13 @@ export default function AppointmentsCalendar() {
     [editAppt, showSnack, setAppointments]
   );
 
-  // 🎨 Colores por estado (dark/light)
-  const STATUS_LABELS = useMemo(() => {
-    const palette = {
-      pending: "yellow",
-      confirmed: "green",
-      in_progress: "blue",
-      completed: "gray",
-      rescheduled: "purple",
-      cancelled: "red",
-      no_show: "orange",
-    };
-
-    const textMap = {
-      pending: "Pendiente",
-      confirmed: "Confirmada",
-      in_progress: "En curso",
-      completed: "Completada",
-      rescheduled: "Reprogramada",
-      cancelled: "Cancelada",
-      no_show: "No asistió",
-    };
-
-    const labelMap = {};
-    for (const [key, color] of Object.entries(palette)) {
-      const classes = darkMode
-        ? `bg-${color}-900/30 text-${color}-300 border-${color}-600`
-        : `bg-${color}-100 text-${color}-700 border-${color}-400`;
-      labelMap[key] = { text: textMap[key], classes };
-    }
-    return labelMap;
-  }, [darkMode]);
-
   // 🔄 Crear eventos + contar citas del día
   const { events, totalToday } = useMemo(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = toISODate(new Date());
     let count = 0;
 
     const mapped = appointments.map((appt) => {
-      const dateStr = new Date(appt.date).toISOString().split("T")[0];
+      const dateStr = toISODate(appt.date);
       if (dateStr === todayStr) count++;
       return {
         id: appt.id,
@@ -145,52 +141,41 @@ export default function AppointmentsCalendar() {
   const EventContent = useCallback(
     ({ event, timeText }) => {
       const { status, note } = event.extendedProps;
-      const label = STATUS_LABELS[status?.toLowerCase()] || STATUS_LABELS.pending;
+      const style = STATUS_STYLES[status?.toLowerCase()] || STATUS_STYLES.pending;
 
       return (
         <div
-          className={`flex flex-col justify-between h-full px-2 py-2 text-xs rounded-lg shadow-sm border-l-4 ${label.classes} ${
-            darkMode ? "bg-[#2a2a2a] text-gray-100" : "bg-white text-gray-900"
+          className={`flex flex-col h-full overflow-hidden px-2.5 py-1.5 text-xs rounded-lg shadow-sm border-l-4 ${style.border} ${
+            darkMode
+              ? "bg-[#242424] text-gray-100"
+              : "bg-white text-gray-900 border-y border-r border-gray-100"
           }`}
         >
           {!isMobile && (
-            <div
-              className={`text-[11px] font-medium ${
-                darkMode ? "text-gray-300" : "text-gray-600"
-              }`}
-            >
-              {timeText}
-            </div>
+            <div className="text-[10px] font-medium text-gray-400">{timeText}</div>
           )}
-          <div className="font-semibold text-sm truncate">{event.title}</div>
+
+          <div className="font-semibold text-[13px] truncate">{event.title}</div>
+
+          <div className="text-[10px] truncate text-gray-400">{note}</div>
+
           <div
-            className={`text-[11px] truncate ${
-              darkMode ? "text-gray-300" : "text-gray-500"
-            }`}
+            className={`mt-auto self-start inline-flex items-center gap-1 rounded-full px-1.5 py-[1px] text-[10px] font-medium ${style.chip}`}
           >
-            {note}
-          </div>
-          <div className="mt-1 inline-flex items-center justify-center gap-1 rounded-md px-2 py-[2px] text-[11px] font-medium">
-            <span
-              className={`inline-block w-2 h-2 rounded-full ${
-                label.classes.match(/text-(\w+)-/)
-                  ? `bg-${label.classes.match(/text-(\w+)-/)[1]}-500`
-                  : "bg-gray-400"
-              }`}
-            ></span>
-            {label.text}
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${style.dot}`} />
+            {style.text}
           </div>
         </div>
       );
     },
-    [darkMode, isMobile, STATUS_LABELS]
+    [darkMode, isMobile]
   );
 
   // === Render principal ===
   return (
     <div
-      className={`overflow-x-auto rounded-xl border shadow-sm ${
-        darkMode ? "border-gray-700 bg-[#1a1a1a]" : "border-gray-200 bg-white"
+      className={`overflow-x-auto rounded-2xl border shadow-sm ${
+        darkMode ? "border-gray-800 bg-[#1a1a1a]" : "border-gray-100 bg-white"
       }`}
     >
       {error && <p className="p-2 text-red-500 text-sm">{error}</p>}
@@ -203,14 +188,14 @@ export default function AppointmentsCalendar() {
       />
 
       {loading ? (
-        <div className="space-y-3 mt-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} variant="rectangular" height={40} />
+        <div className="space-y-2 p-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={44} animation="wave" />
           ))}
         </div>
       ) : appointments.length === 0 ? (
-        <div className="p-6 text-center text-sm text-gray-500">
-          No hay citas registradas aún
+        <div className="p-12 text-center">
+          <p className="text-sm text-gray-400">No hay citas en estas fechas</p>
         </div>
       ) : (
         <FullCalendar

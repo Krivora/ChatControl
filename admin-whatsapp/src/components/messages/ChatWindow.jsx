@@ -3,6 +3,17 @@ import { useWhatsApp } from "../../hooks/useWhatsapp";
 import { UsersApi } from "../../api/users";
 import { AssignmentsApi } from "../../api/assignments";
 import { CustomersApi } from "../../api/customers";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import CloseIcon from "@mui/icons-material/Close";
+import SendIcon from "@mui/icons-material/Send";
+import { formatTime, dayKey, dayLabel } from "../../utils/datetime";
+import {
+  calculatePoints,
+  getRange,
+  initials,
+  MAX_SCORE,
+  formatPhone as formatPhoneFull,
+} from "../../utils/scoring";
 import { useAlert } from "../../utils/alert";
 import { useAuth } from "../../context/AuthContext";
 
@@ -87,7 +98,6 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
   }
 
   let chatEntries = [];
-  const messagesa = [...(chat?.messages || [])];
 
   (chat?.answers || []).forEach((a) => {
     const answerTime = new Date(a.created_at);
@@ -111,6 +121,9 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
       });
     }
   });
+
+  const score = calculatePoints(chat?.answers || []);
+  const scoreRange = getRange(score);
 
   messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   chatEntries = messages.map((msg) => ({
@@ -138,7 +151,7 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
     // aquí no se vuelve a insertar.
     const res = await sendMessage(to, messageToSend, conversationId);
     if (!res.ok) {
-      showSnack(res.error || "No se pudo enviar el mensaje ❌", "error");
+      showSnack(res.error || "No se pudo enviar el mensaje", "error");
       return false;
     }
 
@@ -164,10 +177,10 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
       const res = await CustomersApi.rename(chat.customer?.id, nuevo);
       setCustomerName(res?.data?.full_name || nuevo);
       setEditingName(false);
-      showSnack("Nombre actualizado ✅", "success");
+      showSnack("Nombre actualizado", "success");
     } catch (err) {
       console.error("Error al renombrar cliente:", err);
-      showSnack(err.message || "No se pudo actualizar el nombre ❌", "error");
+      showSnack(err.message || "No se pudo actualizar el nombre", "error");
     } finally {
       setSavingName(false);
     }
@@ -182,8 +195,8 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
       if (asignacionActiva) {
         showSnack(
           asignacionActiva.user_id === userId
-            ? "⚠️ Este usuario ya está asignado a la conversación."
-            : "⚠️ Esta conversación ya tiene un asesor asignado.",
+            ? "Este usuario ya está asignado a la conversación."
+            : "Esta conversación ya tiene un asesor asignado.",
           "warning"
         );
         return;
@@ -198,101 +211,163 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
       const enviado = await handleSend(message);
       showSnack(
         enviado
-          ? "Usuario asignado y mensaje enviado 🎉"
-          : "Usuario asignado, pero el mensaje no se pudo enviar ⚠️",
+          ? "Usuario asignado y mensaje enviado"
+          : "Usuario asignado, pero el mensaje no se pudo enviar",
         enviado ? "success" : "warning"
       );
     } catch (err) {
       console.error("Error al asignar:", err);
-      showSnack(err.message || "Ocurrió un error al asignar usuario ❌", "error");
+      showSnack(err.message || "Ocurrió un error al asignar usuario", "error");
     }
   };
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Header */}
-      <div
-        className={`p-4 border-b font-semibold flex-shrink-0 flex items-center gap-2 ${darkMode
-          ? "bg-[#1f1f1f] border-gray-700 text-white"
-          : "bg-white border-gray-200 text-gray-900"
-          }`}
-      >
-        {editingName ? (
-          <>
-            <input
-              autoFocus
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRename();
-                if (e.key === "Escape") setEditingName(false);
-              }}
-              disabled={savingName}
-              className={`flex-1 rounded-lg px-2 py-1 text-sm font-normal outline-none border ${darkMode
-                ? "bg-[#2a2a2a] text-white border-gray-600"
-                : "bg-white text-gray-900 border-gray-300"
+      {/* Header — tarjeta del cliente */}
+      <div className={`p-3 flex-shrink-0 ${darkMode ? "bg-[#161616]" : "bg-gray-50"}`}>
+        <div
+          className={`rounded-2xl border p-4 shadow-sm ${darkMode
+            ? "bg-[#1f1f1f] border-gray-800"
+            : "bg-white border-gray-100"
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#960b2b] flex items-center justify-center text-white font-semibold">
+              {initials(customerName)}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    autoFocus
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRename();
+                      if (e.key === "Escape") setEditingName(false);
+                    }}
+                    disabled={savingName}
+                    className={`flex-1 min-w-0 rounded-lg px-2 py-1 text-sm outline-none border ${darkMode
+                      ? "bg-[#2a2a2a] text-white border-gray-600"
+                      : "bg-white text-gray-900 border-gray-300"
+                      }`}
+                  />
+                  <button
+                    onClick={handleRename}
+                    disabled={savingName}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] disabled:opacity-50"
+                  >
+                    {savingName ? "..." : "Guardar"}
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    disabled={savingName}
+                    title="Cancelar"
+                    className="px-1 text-gray-400 hover:text-gray-600"
+                  >
+                    <CloseIcon fontSize="small" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <h2
+                    className={`font-semibold text-lg truncate ${darkMode ? "text-white" : "text-gray-900"
+                      }`}
+                  >
+                    {customerName || "Cliente"}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setNameDraft(customerName || "");
+                      setEditingName(true);
+                    }}
+                    title="Cambiar nombre"
+                    className="text-gray-400 hover:text-[#960b2b] opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                  </button>
+                </div>
+              )}
+
+              <p className="text-sm text-gray-400 truncate">
+                {formatPhoneFull(chat.customer?.whatsapp_id)}
+              </p>
+            </div>
+
+            <span
+              className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${scoreRange.chip}`}
+            >
+              {scoreRange.label}
+            </span>
+          </div>
+
+          {/* Barra de score */}
+          <div className="flex items-center gap-3 mt-3">
+            <div
+              className={`h-2 flex-1 rounded-full overflow-hidden ${darkMode ? "bg-gray-700" : "bg-gray-200"
                 }`}
-            />
-            <button
-              onClick={handleRename}
-              disabled={savingName}
-              className="text-sm px-3 py-1 rounded-lg bg-[#960b2b] text-white hover:bg-[#7d0923] disabled:opacity-50"
             >
-              {savingName ? "..." : "Guardar"}
-            </button>
-            <button
-              onClick={() => setEditingName(false)}
-              disabled={savingName}
-              className="text-sm px-2 py-1 text-gray-400 hover:text-gray-600"
-            >
-              Cancelar
-            </button>
-          </>
-        ) : (
-          <>
-            <span className="flex-1 truncate">{customerName || "Cliente"}</span>
-            <button
-              onClick={() => {
-                setNameDraft(customerName || "");
-                setEditingName(true);
-              }}
-              title="Cambiar nombre"
-              className="text-sm font-normal text-gray-400 hover:text-[#960b2b]"
-            >
-              ✏️
-            </button>
-          </>
-        )}
+              <div
+                className={`h-full rounded-full transition-all ${scoreRange.bar}`}
+                style={{ width: `${Math.min(100, (score / MAX_SCORE) * 100)}%` }}
+              />
+            </div>
+            <span className="text-xs text-gray-400 flex-shrink-0">
+              {score} / {MAX_SCORE} pts
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Mensajes */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 scrollbar-hidden">
-        {chatEntries.map((msg) => {
+      <div
+        className={`flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-2 scrollbar-hidden ${darkMode ? "bg-[#161616]" : "bg-gray-50"
+          }`}
+      >
+        {chatEntries.length === 0 && (
+          <div className="h-full flex items-center justify-center text-sm text-gray-400">
+            Aún no hay mensajes en esta conversación
+          </div>
+        )}
+
+        {chatEntries.map((msg, i) => {
           const isBot = msg.sender === "bot";
-          const justify = isBot ? "justify-end" : "justify-start";
-          const bubbleClass = isBot
-            ? "bg-[#960b2b] text-white rounded-br-none"
-            : "bg-gray-300 text-gray-900 rounded-bl-none";
+          const prev = chatEntries[i - 1];
+          const nuevoDia = !prev || dayKey(prev.created_at) !== dayKey(msg.created_at);
 
-          // Convertir fecha a hora local
-          let dateStr = "Hora desconocida";
-          if (msg.created_at) {
-            // Formato ISO básico
-            const dateISO = msg.created_at.replace(" ", "T").split(".")[0];
-            const d = new Date(dateISO);
-
-            if (!isNaN(d.getTime())) {
-              // Ajuste manual a la hora deseada (ejemplo: -14 horas para que 11:55 a.m. sea 9:55 p.m.)
-              d.setHours(d.getHours() - 14); // ajusta según tu diferencia exacta
-
-              dateStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
-            }
-          }
           return (
-            <div key={msg.id} className={`flex ${justify}`}>
-              <div className={`px-4 py-2 rounded-lg max-w-xs break-words shadow ${bubbleClass}`}>
-                <p className="whitespace-pre-line">{msg.content}</p>
-                <span className="text-[11px] opacity-70 block mt-1 text-right">{dateStr}</span>
+            <div key={msg.id}>
+              {nuevoDia && (
+                <div className="flex justify-center my-4">
+                  <span
+                    className={`text-[11px] px-3 py-1 rounded-full ${darkMode
+                      ? "bg-[#2a2a2a] text-gray-400"
+                      : "bg-gray-200 text-gray-500"
+                      }`}
+                  >
+                    {dayLabel(msg.created_at)}
+                  </span>
+                </div>
+              )}
+
+              <div className={`flex ${isBot ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`px-4 py-2.5 max-w-[75%] break-words shadow-sm ${isBot
+                    ? "bg-[#960b2b] text-white rounded-2xl rounded-br-md"
+                    : darkMode
+                      ? "bg-[#2a2a2a] text-gray-100 rounded-2xl rounded-bl-md"
+                      : "bg-white text-gray-900 border border-gray-100 rounded-2xl rounded-bl-md"
+                    }`}
+                >
+                  <p className="whitespace-pre-line text-sm leading-relaxed">{msg.content}</p>
+                  <span
+                    className={`text-[10px] block mt-1 text-right ${isBot ? "text-white/70" : "text-gray-400"
+                      }`}
+                  >
+                    {formatTime(msg.created_at)}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -301,38 +376,46 @@ export default function ChatWindow({ chat, messages = [], darkMode }) {
       </div>
 
       {/* Input */}
-      <div
-        className={`p-3 flex gap-2 border-t flex-shrink-0 ${darkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200"
-          }`}
-      >
-        <input
-          type="text"
-          placeholder="Escribe un mensaje..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={loading}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm outline-none ${darkMode ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-gray-900"
+      <div className={`p-3 flex-shrink-0 ${darkMode ? "bg-[#161616]" : "bg-gray-50"}`}>
+        <div
+          className={`rounded-2xl border p-2 flex gap-2 items-center shadow-sm ${darkMode
+            ? "bg-[#1f1f1f] border-gray-800"
+            : "bg-white border-gray-100"
             }`}
-        />
-        {input.trim() ? (
-        <button
-          onClick={() => handleSend(input)}
-          disabled={loading}
-          className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
         >
-          {loading ? "Enviando..." : "Enviar"}
-        </button>
-      ) : (
-        canAssign && ( // 👈 solo muestra si cumple con el rol
-          <button
-            onClick={() => setShowModal(true)}
+          <input
+            type="text"
+            placeholder="Escribe un mensaje..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && input.trim()) handleSend(input);
+            }}
             disabled={loading}
-            className="bg-[#960b2b] text-white px-4 py-2 rounded-lg hover:bg-[#7d0923]"
-          >
-            Asignar
-          </button>
-        )
-      )}
+            className={`flex-1 rounded-xl px-3 py-2 text-sm outline-none bg-transparent ${darkMode ? "text-white placeholder-gray-500" : "text-gray-900 placeholder-gray-400"
+              }`}
+          />
+          {input.trim() ? (
+            <button
+              onClick={() => handleSend(input)}
+              disabled={loading}
+              title="Enviar"
+              className="flex-shrink-0 w-10 h-10 rounded-full bg-[#960b2b] text-white hover:bg-[#7d0923] disabled:opacity-50 flex items-center justify-center transition"
+            >
+              <SendIcon fontSize="small" />
+            </button>
+          ) : (
+            canAssign && ( // 👈 solo muestra si cumple con el rol
+              <button
+                onClick={() => setShowModal(true)}
+                disabled={loading}
+                className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#960b2b] text-white text-sm font-medium hover:bg-[#7d0923] disabled:opacity-50 transition"
+              >
+                Asignar asesor
+              </button>
+            )
+          )}
+        </div>
       </div>
 
       {/* Modal */}

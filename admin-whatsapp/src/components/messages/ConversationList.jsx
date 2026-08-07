@@ -1,114 +1,156 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { Skeleton } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 import { formatDateTime } from "../../utils/datetime";
+import {
+  calculatePoints,
+  getRange,
+  initials,
+  MAX_SCORE,
+} from "../../utils/scoring";
 
-function normalize(str) {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .replace(/\s/g, "")
-    .replace(/,/g, "")
-    .replace(/\$/g, "")
-    .replace(/–|-/g, "-");
-}
+export default function ConversationList({
+  conversations = [],
+  loading = false,
+  onSelect,
+  selectedId,
+  darkMode,
+}) {
+  const [search, setSearch] = useState("");
 
-const ponderacionMap = {
-  down_payment_max: [
-    { label: "$30,000 – $50,000", points: 15 },
-    { label: "$50,000 – $70,000", points: 15 },
-    { label: "$70,000 – $100,000", points: 20 },
-    { label: "$100,000 – $200,000", points: 25 },
-    { label: "$200,000 o más", points: 25 },
-  ],
-  max_monthly_payment: [
-    { label: "$4,000 – $5,500", points: 25 },
-    { label: "$5,500 – $7,000", points: 25 },
-    { label: "$7,000 – $9,000", points: 25 },
-    { label: "$9,000 o más", points: 25 },
-  ],
-  credit_bureau_status: [
-    { label: "mal", points: 5 },
-    { label: "regular", points: 15 },
-    { label: "bien", points: 30 },
-    { label: "excelente", points: 50 },
-  ],
-  time_to_buy: [
-    { label: "Ya estoy listo", points: 70 },
-    { label: "De 1 a 15 días", points: 15 },
-    { label: "De 15 a 30 días", points: 10 },
-    { label: "Más de 30 días", points: 5 },
-  ],
-};
-
-function calculatePoints(answers = []) {
-  return answers.reduce((sum, a) => {
-    const options = ponderacionMap[a.question_key] || [];
-    const matchedOption = options.find(
-      (opt) => normalize(opt.label) === normalize(a.answer_value)
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) =>
+      `${c.customer_name || ""} ${c.last_message || ""}`.toLowerCase().includes(q)
     );
-    return sum + (matchedOption?.points || 0);
-  }, 0);
-}
+  }, [conversations, search]);
 
-const scoreRanges = [
-  { min: 0, max: 50, color: "bg-red-500", label: "Malo" },
-  { min: 51, max: 100, color: "bg-yellow-400", label: "Regular" },
-  { min: 101, max: 140, color: "bg-green-400", label: "Bien" },
-  { min: 141, max: 170, color: "bg-blue-500", label: "Excelente" },
-];
+  const shell = darkMode
+    ? "bg-[#161616] border-gray-800"
+    : "bg-gray-50 border-gray-200";
 
-function getRange(totalPoints) {
-  return scoreRanges.find((r) => totalPoints >= r.min && totalPoints <= r.max) || {};
-}
-
-export default function ConversationList({ conversations = [], onSelect, selectedId, darkMode }) {
   return (
-    <div
-      className={`w-full border-r h-full overflow-y-auto scrollbar-hidden ${
-        darkMode
-          ? "bg-[#1f1f1f] border-gray-700 text-white"
-          : "bg-white border-gray-200 text-gray-900"
-      }`}
-    >
-      {conversations.length === 0 ? (
-        <div className="p-4 text-sm text-gray-500">No hay conversaciones</div>
-      ) : (
-        conversations.map((conv) => {
-          const convAnswers = conv.answers || [];
-          const totalPoints = calculatePoints(convAnswers);
-          const range = getRange(totalPoints);
+    <div className={`w-full h-full border-r flex flex-col ${shell}`}>
+      {/* Buscador */}
+      <div className="p-3 flex-shrink-0">
+        <div className="relative">
+          <SearchIcon
+            fontSize="small"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar conversación..."
+            className={`w-full rounded-xl pl-10 pr-3 py-2 text-sm outline-none border transition ${
+              darkMode
+                ? "bg-[#1f1f1f] border-gray-700 text-white placeholder-gray-500 focus:border-[#960b2b]"
+                : "bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-[#960b2b]"
+            }`}
+          />
+        </div>
+      </div>
 
-          const lastMessage = conv.last_message || "Sin mensajes aún";
-
-          // Hora + día, compartido con la tabla de asignaciones
-          const lastMessageTime = formatDateTime(conv.last_message_time);
-
-          return (
+      {/* Tarjetas */}
+      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 scrollbar-hidden">
+        {loading &&
+          Array.from({ length: 5 }).map((_, i) => (
             <div
-              key={conv.id}
-              onClick={() => onSelect(conv.id)}
-              className={`p-4 cursor-pointer border-b ${
-                selectedId === conv.id
-                  ? "bg-[#960b2b] text-white"
-                  : darkMode
-                  ? "hover:bg-[#2a2a2a] border-gray-700"
-                  : "hover:bg-gray-100 border-gray-200"
-              }`}
+              key={i}
+              className={`rounded-2xl p-3 ${darkMode ? "bg-[#1f1f1f]" : "bg-white"}`}
             >
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">{conv.customer_name}</span>
-                  <div
-                    className={`w-4 h-4 rounded-full ${range.color}`}
-                    title={range.label}
-                  ></div>
+              <div className="flex items-center gap-3">
+                <Skeleton variant="circular" width={40} height={40} animation="wave" />
+                <div className="flex-1">
+                  <Skeleton variant="text" width="60%" animation="wave" />
+                  <Skeleton variant="text" width="85%" animation="wave" />
                 </div>
-                <span className="text-xs opacity-70">{lastMessageTime}</span>
               </div>
-              <p className="text-sm truncate opacity-80">{lastMessage}</p>
             </div>
-          );
-        })
-      )}
+          ))}
+
+        {!loading && filtered.length === 0 && (
+          <div className="p-6 text-center text-sm text-gray-500">
+            {conversations.length === 0
+              ? "No hay conversaciones"
+              : "Sin resultados para tu búsqueda"}
+          </div>
+        )}
+
+        {!loading &&
+          filtered.map((conv) => {
+            const points = calculatePoints(conv.answers || []);
+            const range = getRange(points);
+            const isSelected = selectedId === conv.id;
+
+            return (
+              <button
+                key={conv.id}
+                onClick={() => onSelect(conv.id)}
+                className={`w-full text-left rounded-2xl p-3 border transition-all duration-150 ${
+                  isSelected
+                    ? "border-[#960b2b] shadow-md ring-1 ring-[#960b2b]/30 " +
+                      (darkMode ? "bg-[#2a1119]" : "bg-[#fdf2f4]")
+                    : darkMode
+                    ? "bg-[#1f1f1f] border-gray-800 hover:border-gray-600 hover:shadow-md"
+                    : "bg-white border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <div
+                    className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white ${
+                      isSelected ? "bg-[#960b2b]" : "bg-gray-400"
+                    }`}
+                  >
+                    {initials(conv.customer_name)}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`font-semibold truncate ${
+                          darkMode ? "text-gray-100" : "text-gray-900"
+                        }`}
+                      >
+                        {conv.customer_name || "Sin nombre"}
+                      </span>
+                      <span className="text-[11px] text-gray-400 flex-shrink-0">
+                        {formatDateTime(conv.last_message_time, "")}
+                      </span>
+                    </div>
+
+                    <p
+                      className={`text-sm truncate mt-0.5 ${
+                        darkMode ? "text-gray-400" : "text-gray-500"
+                      }`}
+                    >
+                      {conv.last_message || "Sin mensajes aún"}
+                    </p>
+
+                    {/* Score */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <div
+                        className={`h-1.5 flex-1 rounded-full overflow-hidden ${
+                          darkMode ? "bg-gray-700" : "bg-gray-200"
+                        }`}
+                      >
+                        <div
+                          className={`h-full rounded-full ${range.bar}`}
+                          style={{ width: `${Math.min(100, (points / MAX_SCORE) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] text-gray-400 flex-shrink-0">
+                        {points} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+      </div>
     </div>
   );
 }

@@ -6,65 +6,45 @@ import { AppointmentCalendar, AppointmentsList } from "../components/appointment
 export default function AppointmentsPage() {
   const { darkMode } = useTheme();
   const [view, setView] = useState("calendar");
-  const [currentDate] = useState(new Date());
+
+  const views = [
+    { id: "calendar", label: "Calendario", icon: <CalendarMonth fontSize="small" /> },
+    { id: "list", label: "Lista", icon: <List fontSize="small" /> },
+  ];
 
   return (
-    <div
-      className={
-        darkMode
-          ? "bg-[#1f1f1f] h-[calc(100vh-120px)] p-6"
-          : "bg-white h-[calc(100vh-120px)] p-6"
-      }
-    >
-      {/* Contenedor toggle */}
+    <div className={darkMode ? "text-gray-100" : "text-gray-900"}>
+      {/* Toggle de vista */}
       <div
-        className={`inline-flex w-80 items-center justify-between mb-4 rounded-xl p-1 ${
-          darkMode ? "bg-[#2a2a2a]" : "bg-gray-100"
+        className={`inline-flex gap-1 p-1 rounded-xl mb-4 ${
+          darkMode ? "bg-[#1a1a1a] border border-gray-800" : "bg-gray-200/60"
         }`}
       >
-        {/* Botón List */}
-        <button
-          onClick={() => setView("list")}
-          className={`flex items-center justify-center gap-2 w-1/2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-            ${
-              view === "list"
-                ? darkMode
-                  ? "bg-white text-black shadow"
-                  : "bg-white text-black shadow"
-                : darkMode
-                ? "text-gray-300 hover:bg-[#3a3a3a]"
-                : "text-gray-600 hover:bg-gray-200"
-            }`}
-        >
-          <List fontSize="small" />
-          List
-        </button>
-
-        {/* Botón Calendar */}
-        <button
-          onClick={() => setView("calendar")}
-          className={`flex items-center justify-center gap-2 w-1/2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-            ${
-              view === "calendar"
-                ? darkMode
-                  ? "bg-white text-black shadow"
-                  : "bg-white text-black shadow"
-                : darkMode
-                ? "text-gray-300 hover:bg-[#3a3a3a]"
-                : "text-gray-600 hover:bg-gray-200"
-            }`}
-        >
-          <CalendarMonth fontSize="small" />
-          Calendar
-        </button>
+        {views.map((v) => {
+          const isActive = view === v.id;
+          return (
+            <button
+              key={v.id}
+              onClick={() => setView(v.id)}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? darkMode
+                    ? "bg-[#2a1119] text-white shadow-sm"
+                    : "bg-white text-[#960b2b] shadow-sm"
+                  : darkMode
+                  ? "text-gray-400 hover:text-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {v.icon}
+              {v.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Cambiar entre Calendar y List */}
-      {view === "calendar" ? (
-        <AppointmentCalendar />
-      ) : (
-        <AppointmentsList />
-      )}
+      {view === "calendar" ? <AppointmentCalendar /> : <AppointmentsList />}
     </div>
   );
 }

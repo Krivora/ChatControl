@@ -10,7 +10,6 @@ import Pagination from "../common/TablePagination";
 import AppointmentRow from "./AppointmentRow";
 import AppointmentCard from "./AppointmentCard";
 import { useDebounce } from "../../hooks/useDebounce";
-import { AnimatePresence, motion } from "framer-motion";
 
 
 // 🎨 Etiquetas de estados
@@ -58,21 +57,21 @@ export default function AppointmentsList() {
   const styles = useMemo(
     () => ({
       container: darkMode
-        ? "rounded-xl border border-gray-700 bg-[#1e1e1e] shadow-sm"
-        : "rounded-xl border border-gray-200 bg-white shadow-sm",
+        ? "rounded-2xl border border-gray-800 bg-[#1a1a1a] shadow-sm"
+        : "rounded-2xl border border-gray-100 bg-white shadow-sm",
       thead: darkMode
-        ? "bg-[#2a2a2a] text-xs font-semibold text-gray-300 uppercase"
-        : "bg-gray-50 text-xs font-semibold text-gray-500 uppercase",
+        ? "text-[11px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-800"
+        : "text-[11px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-100",
       tbody: darkMode
-        ? "divide-y divide-gray-700 bg-[#1e1e1e]"
-        : "divide-y divide-gray-200 bg-white",
-      rowHover: darkMode ? "hover:bg-[#2a2a2a]" : "hover:bg-gray-50",
+        ? "divide-y divide-gray-800"
+        : "divide-y divide-gray-50",
+      rowHover: darkMode ? "hover:bg-[#202020]" : "hover:bg-gray-50",
       textBase: darkMode ? "text-gray-300" : "text-gray-700",
       textStrong: darkMode ? "text-gray-100" : "text-gray-900",
-      textMuted: darkMode ? "text-gray-400" : "text-gray-600",
+      textMuted: darkMode ? "text-gray-400" : "text-gray-500",
       actionBtn: darkMode
-        ? "rounded-full p-1 text-gray-400 hover:bg-[#333333] hover:text-white"
-        : "rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800",
+        ? "w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-[#2a2a2a] hover:text-white transition-colors"
+        : "w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-800 transition-colors",
     }),
     [darkMode]
   );
@@ -144,57 +143,54 @@ export default function AppointmentsList() {
 
   // === Render ===
   return (
-    <div className={`overflow-x-auto ${styles.container}`}>
-      {error && <p className="p-4 text-sm text-red-500">{error}</p>}
-
+    <div>
       {/* 🧭 Tabs con contadores */}
-      <div className="flex border-b mb-2">
-        <button
-          onClick={() => {
-            setActiveTab("active");
-            setPage(1);
-          }}
-          className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${
-            activeTab === "active"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Citas activas
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              activeTab === "active"
-                ? "bg-blue-100 text-blue-700"
-                : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            {activeCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab("history");
-            setPage(1);
-          }}
-          className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${
-            activeTab === "history"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Historial
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              activeTab === "history"
-                ? "bg-blue-100 text-blue-700"
-                : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            {historyCount}
-          </span>
-        </button>
+      <div
+        className={`inline-flex gap-1 p-1 rounded-xl mb-4 ${
+          darkMode ? "bg-[#1a1a1a] border border-gray-800" : "bg-gray-200/60"
+        }`}
+      >
+        {[
+          { id: "active", label: "Citas activas", count: activeCount },
+          { id: "history", label: "Historial", count: historyCount },
+        ].map((tab) => {
+          const isTabActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setPage(1);
+              }}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                isTabActive
+                  ? darkMode
+                    ? "bg-[#2a1119] text-white shadow-sm"
+                    : "bg-white text-[#960b2b] shadow-sm"
+                  : darkMode
+                  ? "text-gray-400 hover:text-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                  isTabActive
+                    ? "bg-[#960b2b] text-white"
+                    : darkMode
+                    ? "bg-[#2a2a2a] text-gray-400"
+                    : "bg-gray-300 text-gray-600"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
+
+      <div className={`overflow-x-auto ${styles.container}`}>
+      {error && <p className="p-4 text-sm text-red-500">{error}</p>}
 
       {/* 🔍 Filtros */}
       <TableFilters
@@ -216,44 +212,62 @@ export default function AppointmentsList() {
       <table className="hidden w-full border-collapse text-left text-sm md:table">
         <thead className={styles.thead}>
           <tr>
-            {["Fecha", "Hora", "Cliente", "Teléfono", "Status", "Acciones"].map(
-              (h) => (
-                <th
-                  key={h}
-                  className={`px-6 py-3 ${
-                    h === "Acciones" ? "text-right" : ""
-                  }`}
-                >
-                  {h}
-                </th>
-              )
-            )}
+            {["Fecha", "Hora", "Cliente", "Estado", ""].map((h, i) => (
+              <th
+                key={i}
+                className={`px-5 py-3 ${i === 4 ? "text-right" : ""}`}
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
 
         <tbody className={styles.tbody}>
           {loading &&
-            Array.from({ length: 3 }).map((_, i) => (
+            Array.from({ length: 4 }).map((_, i) => (
               <tr key={i}>
-                {Array.from({ length: 6 }).map((_, j) => (
-                  <td key={j} className="px-6 py-4">
-                    <Skeleton width={100} height={20} />
-                  </td>
-                ))}
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton variant="rounded" width={44} height={44} animation="wave" />
+                    <div className="flex-1">
+                      <Skeleton variant="text" width={90} animation="wave" />
+                      <Skeleton variant="text" width={110} animation="wave" />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <Skeleton variant="text" width={110} animation="wave" />
+                </td>
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton variant="circular" width={36} height={36} animation="wave" />
+                    <div className="flex-1">
+                      <Skeleton variant="text" width={100} animation="wave" />
+                      <Skeleton variant="text" width={80} animation="wave" />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <Skeleton variant="rounded" width={80} height={24} animation="wave" />
+                </td>
+                <td className="px-5 py-4 text-right">
+                  <Skeleton variant="circular" width={28} height={28} animation="wave" />
+                </td>
               </tr>
             ))}
 
           {!loading && appointments.length === 0 && (
             <tr>
               <td
-                colSpan="6"
-                className="px-6 py-4 text-center text-sm text-gray-500"
+                colSpan="5"
+                className="px-5 py-12 text-center text-sm text-gray-400"
               >
                 No hay citas {activeTab === "active" ? "activas" : "en historial"}
               </td>
             </tr>
           )}
-          
+
 
           {!loading &&
             appointments.map((appt) => (
@@ -272,9 +286,9 @@ export default function AppointmentsList() {
       </table>
 
       {/* === Vista Móvil (cards) === */}
-      <div className="block divide-y divide-gray-200 md:hidden">
+      <div className={`block md:hidden divide-y ${darkMode ? "divide-gray-800" : "divide-gray-50"}`}>
         {!loading && appointments.length === 0 && (
-          <p className="p-4 text-center text-sm text-gray-500">
+          <p className="p-8 text-center text-sm text-gray-400">
             No hay citas {activeTab === "active" ? "activas" : "en historial"}
           </p>
         )}
@@ -294,6 +308,7 @@ export default function AppointmentsList() {
       </div>
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       <AppointmentForm
         open={!!editAppt}

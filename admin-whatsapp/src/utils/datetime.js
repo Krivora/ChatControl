@@ -39,3 +39,46 @@ export const formatDateTime = (value, fallback = "Hora desconocida") => {
   if (!d) return fallback;
   return `${formatTime(value)} — ${formatDay(value)}`;
 };
+
+// Fecha local en formato YYYY-MM-DD, sin el ajuste de horas: para filtros
+// de API y valores de <input type="date">.
+export const toISODate = (date) => {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+};
+
+// Clave estable de día, para agrupar mensajes: "2026-08-06"
+export const dayKey = (value) => {
+  const d = parse(value);
+  if (!d) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+};
+
+// Separador de conversación: "Hoy", "Ayer" o "6 de agosto"
+export const dayLabel = (value) => {
+  const d = parse(value);
+  if (!d) return "";
+
+  const hoy = new Date();
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
+
+  const same = (a, b) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (same(d, hoy)) return "Hoy";
+  if (same(d, ayer)) return "Ayer";
+
+  return d.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    ...(d.getFullYear() !== hoy.getFullYear() ? { year: "numeric" } : {}),
+  });
+};
