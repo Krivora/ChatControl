@@ -31,7 +31,18 @@ export default function Layout() {
       {/* 📱 En móvil es un cajón: como columna fija se comía el ancho */}
       {mobileNavOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="w-64 h-full shadow-2xl">
+          {/* El cajón es `fixed`, o sea que no hereda las áreas seguras del
+              contenedor: las vuelve a aplicar por su cuenta. */}
+          <div
+            style={{
+              paddingTop: "env(safe-area-inset-top)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+              paddingLeft: "env(safe-area-inset-left)",
+            }}
+            className={`w-64 h-full shadow-2xl ${
+              darkMode ? "bg-[#161616]" : "bg-white"
+            }`}
+          >
             <Sidebar
               isOpen
               setIsOpen={() => setMobileNavOpen(false)}
