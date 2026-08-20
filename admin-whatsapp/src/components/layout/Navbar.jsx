@@ -12,6 +12,7 @@ const PAGE_TITLES = [
   { path: "/assignments", title: "Asignación", subtitle: "Clientes por asesor" },
   { path: "/appointments", title: "Citas", subtitle: "Agenda de visitas" },
   { path: "/contents", title: "Configuración", subtitle: "Contenidos del bot" },
+  { path: "/reports", title: "Reportes", subtitle: "Extracción de datos" },
   { path: "/users", title: "Usuarios", subtitle: "Equipo y accesos" },
   { path: "/profile", title: "Mi perfil", subtitle: "" },
   { path: "/", title: "Inicio", subtitle: "Resumen general" },

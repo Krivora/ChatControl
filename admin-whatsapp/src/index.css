@@ -20,3 +20,97 @@
 .fc .fc-timegrid-slot {
   height: 120px !important; /* ajusta hasta que te guste */
 }
+
+/* Impresión / "Guardar como PDF" del resumen de Inicio.
+   La app vive dentro de un contenedor de alto fijo con scroll propio, así que
+   imprimir sin soltar esas restricciones solo saca la primera pantalla. */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+/* Paso previo a abrir el diálogo de impresión: la vista se estrecha al ancho
+   real de la hoja para que recharts vuelva a medir las gráficas. Sin esto los
+   SVG conservan el ancho de la ventana (~1100px) y salen cortados en el papel.
+   El layout aquí debe coincidir con el del bloque @media print de abajo. */
+.printing-preview {
+  width: 700px !important;
+  max-width: 700px !important;
+}
+
+.printing-preview .report-pair {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.printing-preview .report-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+@media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* Sin esto Chrome descarta fondos y rellenos, y las gráficas salen huecas. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Menú lateral, barra superior y controles no van al papel. */
+  aside,
+  header {
+    display: none !important;
+  }
+
+  /* Cualquier caja con scroll propio (tablas anchas, mapa de calor, listas)
+     debe mostrarse completa en el papel, no recortada a su ventana. */
+  .print-page,
+  .print-page * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .print-page {
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  /* Las tarjetas no deben partirse a la mitad entre dos hojas. */
+  .print-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-pair {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .report-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Las tablas de muchas columnas (desempeño por asesor) no caben en el ancho
+     de una hoja con la tipografía de pantalla. */
+  .print-page table {
+    font-size: 9px !important;
+    width: 100% !important;
+  }
+
+  .print-page th,
+  .print-page td {
+    padding: 3px 5px !important;
+  }
+
+  /* Sombras y transiciones no aportan nada impresas y engordan el PDF. */
+  .print-page * {
+    box-shadow: none !important;
+    transition: none !important;
+  }
+}

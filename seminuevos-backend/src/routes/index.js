@@ -7,6 +7,7 @@ import customers from './customers.routes.js';
 import conversations from './conversations.routes.js';
 import contents from './contents.routes.js';
 import messagesRoutes from "./messages.routes.js";
+import reports from './reports.routes.js';
 
 import slots from './slots.routes.js';
 import users from './users.routes.js';
@@ -25,6 +26,7 @@ router.use('/assignments', assignments);
 router.use('/customers', customers);
 router.use('/conversations', conversations);
 router.use('/contents', contents);
+router.use('/reports', reports);
 
 router.use('/slots', slots);
 router.use('/users', users);

@@ -9,6 +9,7 @@ import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
+import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
@@ -46,15 +47,20 @@ export default function Sidebar({
     { id: "configuration", label: "Configuración", icon: <SettingsOutlinedIcon fontSize="small" />, path: "/contents" },
   ];
 
+  // Cruza la cartera de todos los asesores: solo para quien administra.
+  const staffItems = [
+    { id: "reports", label: "Reportes", icon: <InsightsOutlinedIcon fontSize="small" />, path: "/reports" },
+  ];
+
   const adminItems = [
     { id: "users", label: "Usuarios", icon: <PeopleOutlineIcon fontSize="small" />, path: "/users" },
   ];
 
  const menuItems =
   user?.role === "super_admin"
-    ? [...baseItems, ...adminItems]
+    ? [...baseItems, ...staffItems, ...adminItems]
     : user?.role === "admin"
-    ? [...baseItems, ...adminItems.filter((i) => i.id !== "users")] // admin no ve “usuarios”
+    ? [...baseItems, ...staffItems, ...adminItems.filter((i) => i.id !== "users")] // admin no ve “usuarios”
     : user?.role === "usuario"
     ? baseItems.filter(
         (i) => i.id === "assignment" || i.id === "appointments"

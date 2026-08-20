@@ -7,6 +7,7 @@ import AppointmentsPage from "./pages/AppointmentPage";
 import ContentsPage from "./pages/ContentsPage";
 import UsersPage from "./pages/UsersPage";
 import AssignmentPage from "./pages/AssignmentPage";
+import ReportsPage from "./pages/ReportsPage";
 import PrivateRoute from "./routes/PrivateRoute";
 import Layout from "./components/layout/Layout";
 
@@ -25,6 +26,11 @@ function App() {
               <Route index element={<UsersPage />} />
             </Route>
             <Route path="/assignments" element={<AssignmentPage />} />
+            {/* Los reportes cruzan la cartera de todos los asesores: mismo
+                candado que en el backend. */}
+            <Route path="/reports" element={<PrivateRoute roles={["admin", "super_admin"]} />}>
+              <Route index element={<ReportsPage />} />
+            </Route>
           </Route>
         </Route>
 

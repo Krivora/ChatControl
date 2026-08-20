@@ -1,387 +1,295 @@
 // src/pages/Dashboard.jsx
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import StatCard from "../components/dashboard/StatCard";
-import WeeklyChart from "../components/dashboard/WeeklyChart";
+import { useState } from "react";
+import { Navigate } from "react-router-dom";
+import PrintIcon from "@mui/icons-material/Print";
+import DownloadIcon from "@mui/icons-material/Download";
+import GridOnIcon from "@mui/icons-material/GridOn";
 import { useTheme } from "../context/ThemeContext";
-import { UsersApi } from "../api/users";
-import { AppointmentsApi } from "../api/appointments";
-import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
-import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
-import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
-import CreditScoreOutlinedIcon from "@mui/icons-material/CreditScoreOutlined";
-import { calculatePoints, getRange, initials, MAX_SCORE } from "../utils/scoring";
+import { useAuth } from "../context/AuthContext";
+import { useAlert } from "../utils/alert";
+import { useReports } from "../hooks/useReports";
+import { usePrintMode } from "../hooks/usePrintMode";
+import ReportFilters from "../components/reports/ReportFilters";
+import KpiGrid from "../components/reports/KpiGrid";
+import TrendChart from "../components/reports/TrendChart";
+import FunnelPanel from "../components/reports/FunnelPanel";
+import DonutPanel from "../components/reports/DonutPanel";
+import AnswersPanel from "../components/reports/AnswersPanel";
+import HeatmapPanel from "../components/reports/HeatmapPanel";
+import AdvisorsTable from "../components/reports/AdvisorsTable";
+import { QUALITY_COLORS, fixedColorMap } from "../utils/vizPalette";
+import { downloadCsv, exportFilename } from "../utils/exportData";
+import { downloadExcel } from "../utils/exportExcel";
+import { buildSummaryWorkbook } from "../utils/reportWorkbook";
+import {
+  APPOINTMENT_LABELS,
+  APPOINTMENT_ORDER,
+  ASSIGNMENT_ORDER,
+  CONVERSATION_LABELS,
+  CONVERSATION_ORDER,
+  translateLabels,
+} from "../utils/reportLabels";
 
-// Citas que siguen "vivas": las canceladas, completadas y no-show no cuentan
-// como próximas.
-const UPCOMING_STATUSES = ["pending", "confirmed", "in_progress", "rescheduled"];
+// El color de cada serie se toma por su índice fijo en este catálogo: quitar
+// una serie del tablero no repinta a las demás.
+const ACTIVITY_SERIES = [
+  { key: "conversaciones", label: "Conversaciones", colorIndex: 0 },
+  { key: "clientes", label: "Clientes nuevos", colorIndex: 1 },
+  { key: "asignaciones", label: "Asignaciones", colorIndex: 2 },
+  { key: "citas", label: "Citas", colorIndex: 3 },
+];
 
-// Día local en formato YYYY-MM-DD. Comparar cadenas evita los corrimientos
-// de zona horaria que produce toISOString().
-const toLocalDay = (value) => {
-  const d = new Date(value);
-  if (isNaN(d)) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-};
+// Los mensajes van en su propia gráfica: comparten eje de tiempo pero no de
+// magnitud (miles contra decenas), y un segundo eje inventaría correlaciones.
+const MESSAGE_SERIES = [
+  { key: "mensajes_entrantes", label: "Del cliente", colorIndex: 4 },
+  { key: "mensajes_salientes", label: "Del bot y asesores", colorIndex: 5 },
+];
 
 export default function Dashboard() {
-  const { darkMode } = useTheme();
-  const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const { darkMode: themeDarkMode } = useTheme();
+  const { user } = useAuth();
+  const { showSnack } = useAlert();
+  const [exporting, setExporting] = useState(false);
+  const { printing, print } = usePrintMode();
 
-  const [totalClientesSemana, setTotalClientesSemana] = useState(0);
-  const [totalConversaciones, setTotalConversaciones] = useState(0);
-  const [totalConversacionesActivas, setTotalConversacionesActivas] = useState(0);
-  const [weekRange, setWeekRange] = useState({ start: "", end: "" });
-  const [topProfiles, setTopProfiles] = useState([]);
-  const [weeklyMessages, setWeeklyMessages] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [todayAppointments, setTodayAppointments] = useState([]);
-  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
-  const [users, setUsers] = useState([]);
+  // El papel siempre es blanco: al imprimir todo el tablero se pinta en claro,
+  // aunque el usuario tenga el tema oscuro. Cada panel recibe este valor, así
+  // que también cambian los colores de las gráficas —que son distintos para
+  // fondo claro y oscuro— y no solo los fondos.
+  const darkMode = themeDarkMode && !printing;
 
-  // ---- Resize ----
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const {
+    data,
+    loading,
+    refreshing,
+    error,
+    range,
+    setRange,
+    granularity,
+    setGranularity,
+    reload,
+  } = useReports("30d");
 
-  // ---- Rango de la semana actual ----
-  useEffect(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(now.setDate(diffToMonday));
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+  const granularityUsed = data?.range?.granularity || "day";
+  const statusColors = {
+    appointments: fixedColorMap(APPOINTMENT_ORDER, darkMode),
+    assignments: fixedColorMap(ASSIGNMENT_ORDER, darkMode),
+    conversations: fixedColorMap(CONVERSATION_ORDER, darkMode),
+  };
 
-    const format = (d) =>
-      `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+  // Todo el tablero en un solo libro: una hoja por bloque (KPIs, actividad,
+  // embudo, calidad, estatus, asesores y respuestas del bot).
+  const exportWorkbook = async () => {
+    if (!data) return;
+    setExporting(true);
+    try {
+      await downloadExcel(
+        exportFilename(`resumen-${range.from}_${range.to}`, "xlsx"),
+        buildSummaryWorkbook(data, range)
+      );
+      showSnack("Resumen exportado a Excel", "success");
+    } catch (err) {
+      console.error(err);
+      showSnack(err.message || "No se pudo generar el Excel", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
-    setWeekRange({ start: format(monday), end: format(sunday) });
-  }, []);
-
-  // ---- Fetch clientes ----
-  useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/customers?page=1&pageSize=1000`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        const data = await res.json();
-        setCustomers(data.data || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchClientes();
-  }, []);
-
-  // ---- Fetch conversaciones ----
-  useEffect(() => {
-    const fetchConversaciones = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/conversations?page=1&pageSize=1000`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        const data = await res.json();
-        setConversations(data.data || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchConversaciones();
-  }, []);
-
-  // ---- Total clientes semana ----
-  useEffect(() => {
-    if (!weekRange.start || !weekRange.end || customers.length === 0) return;
-
-    const startDate = new Date(weekRange.start.split("-").reverse().join("-"));
-    const endDate = new Date(weekRange.end.split("-").reverse().join("-"));
-
-    const clientesSemana = customers.filter(c => {
-      const created = new Date(c.created_at);
-      return created >= startDate && created <= endDate;
-    });
-
-    setTotalClientesSemana(clientesSemana.length);
-  }, [weekRange, customers]);
-
-  // ---- Conversaciones + Mejores Perfilamientos ----
-  useEffect(() => {
-    if (!conversations.length) return;
-
-    const finalizadas = conversations.filter(c => c.status === "finish");
-    setTotalConversaciones(finalizadas.length);
-
-    const activas = conversations.filter(c => c.status === "active");
-    setTotalConversacionesActivas(activas.length);
-
-    // Las respuestas llegan con nombres distintos según el endpoint; se
-    // normalizan antes de puntuar con la tabla compartida.
-    const toAnswer = (a) => ({
-      question_key: a.question_key ?? a.question?.key ?? "",
-      answer_value: a.answer_value ?? a.value ?? a.answer ?? "",
-    });
-
-    const profiles = conversations.map(conv => {
-      const points = calculatePoints((conv.answers || []).map(toAnswer));
-      const range = getRange(points);
-      return {
-        id: conv.id,
-        name: conv.customer_name || conv.customer?.full_name || "Sin nombre",
-        points,
-        label: range.label,
-        bar: range.bar,
-        chip: range.chip,
-      };
-    });
-    setTopProfiles(profiles);
-  }, [conversations]);
-
-  // ---- WeeklyMessages ----
-  useEffect(() => {
-    if (!weekRange.start || !weekRange.end || customers.length === 0) return;
-
-    const startDate = new Date(weekRange.start.split("-").reverse().join("-"));
-    const endDate = new Date(weekRange.end.split("-").reverse().join("-"));
-
-    const days = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
-    const counts = Array(7).fill(0);
-
-    customers.forEach(c => {
-      if(!c.last_interaction) return;
-      const msgDate = new Date(c.last_interaction);
-      if(msgDate >= startDate && msgDate <= endDate){
-        const dayIdx = (msgDate.getDay() + 6) % 7;
-        counts[dayIdx] += 1;
-      }
-    });
-
-    const chartData = days.map((name, i) => ({ name, mensajes: counts[i] }));
-    setWeeklyMessages(chartData);
-  }, [customers, weekRange]);
-
-  // ---- Fetch users ----
-    useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await UsersApi.list();
-        // asumimos que la API devuelve { data: [...] }
-        setUsers(res.data || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-
-  // ---- Fetch appointments ----
-  // Se piden solo las de hoy en adelante y con status vigente: el backend
-  // pagina en 20 por defecto ordenando por fecha ascendente, así que sin
-  // filtros solo llegaban las más viejas del histórico.
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const res = await AppointmentsApi.list({
-          statuses: UPCOMING_STATUSES.join(","),
-          dateFrom: toLocalDay(new Date()),
-          order: "asc",
-          pageSize: 100,
-        });
-        setAppointments(res.data || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchAppointments();
-  }, []);
-
-    // ---- Procesar citas ----
-  useEffect(() => {
-    const today = toLocalDay(new Date());
-
-    // `customer_name` ya viene resuelto por el backend; buscarlo en la lista
-    // de customers fallaba porque esa también llega paginada.
-    const formatAppointment = (appt) => ({
-      id: appt.id,
-      name: appt.customer_name || "Sin nombre",
-      day: toLocalDay(appt.date),
-      time: String(appt.time_start || "").slice(0, 5),
-    });
-
-    const key = (a) => `${toLocalDay(a.date)} ${a.time_start}`;
-    const sorted = [...appointments].sort((a, b) => key(a).localeCompare(key(b)));
-
-    setTodayAppointments(
-      sorted.filter((a) => toLocalDay(a.date) === today).map(formatAppointment)
+  // La serie sola en CSV, para pegarla rápido en otra hoja o herramienta.
+  const exportSeries = () => {
+    if (!data?.series?.length) return;
+    const activity = buildSummaryWorkbook(data, range).find((s) => s.name === "Actividad");
+    downloadCsv(
+      exportFilename(`actividad-${range.from}_${range.to}`, "csv"),
+      activity.columns,
+      activity.rows
     );
+  };
 
-    setUpcomingAppointments(
-      sorted.filter((a) => toLocalDay(a.date) > today).map(formatAppointment)
-    );
-  }, [appointments]);
+  const secondaryButton = `px-3 py-2 rounded-lg text-sm border flex items-center gap-2 transition-colors disabled:opacity-50 ${
+    darkMode
+      ? "bg-[#2a2a2a] text-gray-200 border-gray-700"
+      : "bg-gray-100 text-gray-700 border-gray-200"
+  }`;
 
-  const emptyState = (texto) => (
-    <div className="flex-1 flex items-center justify-center py-8 text-sm text-gray-400">
-      {texto}
-    </div>
-  );
-
-  const rowHover = darkMode ? "hover:bg-[#242424]" : "hover:bg-gray-50";
-
-  const AppointmentItem = ({ appt }) => (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
-      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#960b2b]/10 border border-[#960b2b]/20 flex items-center justify-center text-xs font-bold text-[#960b2b]">
-        {appt.time}
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate">{appt.name}</p>
-        <p className="text-xs text-gray-400">{appt.day}</p>
-      </div>
-    </div>
-  );
+  // El resumen cruza la cartera de todos los asesores y el backend lo
+  // restringe a administración; un asesor arranca en su bandeja.
+  if (user && user.role === "usuario") {
+    return <Navigate to="/assignments" replace />;
+  }
 
   return (
-    <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          label="Clientes esta semana"
-          value={totalClientesSemana}
-          hint={weekRange.start ? `${weekRange.start} a ${weekRange.end}` : undefined}
-          icon={<GroupsOutlinedIcon fontSize="small" />}
-          darkMode={darkMode}
-        />
-        <StatCard
-          label="Conversaciones completadas"
-          value={totalConversaciones}
-          icon={<TaskAltOutlinedIcon fontSize="small" />}
-          darkMode={darkMode}
-        />
-        <StatCard
-          label="Conversaciones pendientes"
-          value={totalConversacionesActivas}
-          icon={<ForumOutlinedIcon fontSize="small" />}
-          darkMode={darkMode}
-        />
-        <StatCard
-          label="Créditos ingresados"
-          value={null}
-          hint="Sin datos aún"
-          icon={<CreditScoreOutlinedIcon fontSize="small" />}
-          darkMode={darkMode}
-        />
-      </div>
-
-      {/* Perfilamientos + gráfica */}
-      <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
-        <StatCard
-          title="Mejores perfilamientos"
-          darkMode={darkMode}
-          className="min-h-[300px]"
+    <div className={`print-page space-y-4 ${printing ? "printing-preview" : ""}`}>
+      {/* Una sola fila de filtros para todo lo que está debajo */}
+      <ReportFilters
+        range={range}
+        onRangeChange={setRange}
+        granularity={granularity}
+        onGranularityChange={setGranularity}
+        onReload={reload}
+        refreshing={refreshing}
+        darkMode={darkMode}
+      >
+        <button
+          onClick={exportWorkbook}
+          className={secondaryButton}
+          disabled={!data || exporting}
+          title="Descargar todo el resumen en un libro de Excel"
         >
-          {topProfiles.filter(p => p.label === "Bien" || p.label === "Excelente").length === 0
-            ? emptyState("No hay perfilamientos")
-            : (
-              <div className="flex flex-col gap-0.5 max-h-[260px] overflow-y-auto scrollbar-hidden">
-                {topProfiles
-                  .filter(p => p.label === "Bien" || p.label === "Excelente")
-                  .sort((a, b) => b.points - a.points)
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => navigate("/messages", { state: { conversationId: p.id } })}
-                      className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${rowHover}`}
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#960b2b] flex items-center justify-center text-white text-[10px] font-semibold">
-                        {initials(p.name)}
-                      </div>
+          <GridOnIcon fontSize="small" />
+          {exporting ? "Generando..." : "Excel"}
+        </button>
+        <button
+          onClick={exportSeries}
+          className={secondaryButton}
+          disabled={!data}
+          title="Descargar solo la serie de actividad en CSV"
+        >
+          <DownloadIcon fontSize="small" />
+          CSV
+        </button>
+        <button onClick={print} className={secondaryButton} disabled={printing}>
+          <PrintIcon fontSize="small" />
+          {printing ? "Preparando..." : "Imprimir / PDF"}
+        </button>
+      </ReportFilters>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className={`h-1.5 flex-1 rounded-full overflow-hidden ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}>
-                            <div
-                              className={`h-full rounded-full ${p.bar}`}
-                              style={{ width: `${Math.min(100, (p.points / MAX_SCORE) * 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-[11px] text-gray-400 flex-shrink-0">{p.points} pts</span>
-                        </div>
-                      </div>
-
-                      <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${p.chip}`}>
-                        {p.label}
-                      </span>
-                    </button>
-                  ))}
-              </div>
-            )}
-        </StatCard>
-
-        <WeeklyChart data={weeklyMessages} darkMode={darkMode} weekRange={weekRange} />
+      {/* Encabezado que solo sale en el papel: sin él la hoja impresa no dice
+          de qué periodo son los números. */}
+      <div className="hidden print:block print-block mb-4">
+        <h1 className="text-xl font-semibold">Resumen general</h1>
+        <p className="text-sm text-gray-600">
+          Periodo del {range.from} al {range.to}
+        </p>
       </div>
 
-      {/* Colaboradores + citas */}
-      <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
-        <StatCard title="Colaboradores" darkMode={darkMode} className="min-h-[240px]">
-          {users.length === 0
-            ? emptyState("No hay colaboradores")
-            : (
-              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto scrollbar-hidden">
-                {users.map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => navigate("/users")}
-                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${rowHover}`}
-                  >
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold ${
-                      darkMode ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-200 text-gray-600"
-                    }`}>
-                      {initials(`${u.nombre} ${u.apellido}`)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{u.nombre} {u.apellido}</p>
-                      <p className="text-xs text-gray-400 truncate">{u.email}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-        </StatCard>
+      {error && (
+        <div
+          className={`rounded-2xl border p-5 text-sm ${
+            darkMode
+              ? "bg-[#1a1a1a] border-gray-800 text-[#e66767]"
+              : "bg-white border-gray-100 text-[#d03b3b]"
+          }`}
+        >
+          {error}
+        </div>
+      )}
 
-        <StatCard title="Citas de hoy" darkMode={darkMode} className="min-h-[240px]">
-          {todayAppointments.length === 0
-            ? emptyState("No hay citas hoy")
-            : (
-              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto scrollbar-hidden">
-                {todayAppointments.map((appt) => (
-                  <AppointmentItem key={appt.id} appt={appt} />
-                ))}
-              </div>
-            )}
-        </StatCard>
+      {loading ? (
+        // Solo en la primera carga: los refrescos posteriores atenúan la vista
+        // en lugar de reemplazarla.
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className={`rounded-2xl border shadow-sm p-5 h-[132px] animate-pulse ${
+                darkMode ? "bg-[#1a1a1a] border-gray-800" : "bg-white border-gray-100"
+              }`}
+            />
+          ))}
+        </div>
+      ) : (
+        data && (
+          // Mientras recarga se mantiene la vista anterior atenuada: sin
+          // esqueletos que hagan saltar el layout en cada cambio de rango.
+          // En impresión la opacidad se anula, o el PDF sale desvaído.
+          <div
+            className={`space-y-4 transition-opacity print:opacity-100 ${
+              refreshing ? "opacity-60" : "opacity-100"
+            }`}
+          >
+            <div className="print-block">
+              <KpiGrid
+                summary={data.summary}
+                previousSummary={data.previousSummary}
+                darkMode={darkMode}
+              />
+            </div>
 
-        <StatCard title="Próximas citas" darkMode={darkMode} className="min-h-[240px]">
-          {upcomingAppointments.length === 0
-            ? emptyState("No hay próximas citas")
-            : (
-              <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto scrollbar-hidden">
-                {upcomingAppointments.map((appt) => (
-                  <AppointmentItem key={appt.id} appt={appt} />
-                ))}
+            <div className="print-block">
+              <TrendChart
+                title="Actividad comercial"
+                subtitle={`${range.from} a ${range.to}`}
+                data={data.series}
+                series={ACTIVITY_SERIES}
+                granularity={granularityUsed}
+                darkMode={darkMode}
+              />
+            </div>
+
+            <div className="report-pair grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="print-block">
+                <TrendChart
+                  title="Volumen de mensajes"
+                  subtitle="Entrantes y salientes"
+                  data={data.series}
+                  series={MESSAGE_SERIES}
+                  granularity={granularityUsed}
+                  darkMode={darkMode}
+                  height={220}
+                />
               </div>
-            )}
-        </StatCard>
-      </div>
+              <div className="print-block">
+                <FunnelPanel funnel={data.funnel} darkMode={darkMode} />
+              </div>
+            </div>
+
+            <div className="report-pair grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="print-block">
+                <DonutPanel
+                  title="Calidad de los leads"
+                  subtitle={`Puntaje promedio: ${data.averageScore} pts`}
+                  data={data.quality}
+                  colors={QUALITY_COLORS}
+                  darkMode={darkMode}
+                />
+              </div>
+              <div className="print-block">
+                <AnswersPanel answers={data.answers} darkMode={darkMode} />
+              </div>
+            </div>
+
+            <div className="report-pair grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="print-block">
+                <DonutPanel
+                  title="Estatus de seguimiento"
+                  subtitle="Asignaciones del periodo"
+                  data={data.status?.assignments}
+                  colors={statusColors.assignments}
+                  darkMode={darkMode}
+                />
+              </div>
+              <div className="print-block">
+                <DonutPanel
+                  title="Estatus de las citas"
+                  data={translateLabels(data.status?.appointments, APPOINTMENT_LABELS)}
+                  colors={statusColors.appointments}
+                  darkMode={darkMode}
+                />
+              </div>
+            </div>
+
+            <div className="print-block">
+              <AdvisorsTable advisors={data.advisors} darkMode={darkMode} />
+            </div>
+
+            <div className="print-block">
+              <HeatmapPanel heatmap={data.heatmap} darkMode={darkMode} />
+            </div>
+
+            <div className="print-block">
+              <DonutPanel
+                title="Estado de las conversaciones"
+                data={translateLabels(data.status?.conversations, CONVERSATION_LABELS)}
+                colors={statusColors.conversations}
+                darkMode={darkMode}
+              />
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 }
