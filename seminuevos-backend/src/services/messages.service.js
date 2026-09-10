@@ -1,18 +1,19 @@
-import { MessagesRepo } from "../repositories/messages.repo.js";
+// src/services/messages.service.js
+import { MessagesRepo } from '../repositories/messages.repo.js';
 
 export const MessagesService = {
-  async create(req) {
-    const { conversation_id, content, content_type } = req.body;
-    return await MessagesRepo.create({
-      conversation_id,
-      sender: "user",
+  /** @param {{ conversationId: string|number, content: string, contentType?: string }} input */
+  async create({ conversationId, content, contentType = 'text' }) {
+    return MessagesRepo.create({
+      conversation_id: conversationId,
+      sender: 'user',
       content,
-      content_type: content_type || "text",
+      content_type: contentType,
     });
   },
 
-  // Nuevo método para obtener mensajes por conversación
-  async listByConversation(conversationId) {
-    return await MessagesRepo.listByConversation(conversationId);
+  /** @param {{ conversationId: string|number }} input */
+  async listByConversation({ conversationId }) {
+    return MessagesRepo.listByConversation(conversationId);
   },
 };

@@ -12,12 +12,13 @@ import {
 import { validate } from '../middlewares/validate.js';
 import { registerUserSchema, loginUserSchema,updateUserSchema } from '../validators/users.validators.js';
 import { requireAuth } from '../middlewares/auth.js';
+import { loginLimiter } from '../middlewares/rateLimit.js';
 import { authorizeRole } from '../middlewares/authorizeRole.js';
 
 const r = Router();
 
 // Login
-r.post('/login', validate(loginUserSchema), login);
+r.post('/login', loginLimiter, validate(loginUserSchema), login);
 
 // Listar todos los usuarios → Solo admin o super_admin
 r.get('/', requireAuth, listUsers);

@@ -1,61 +1,44 @@
-import { AssignmentsService } from "../services/assignments.service.js";
+// src/controllers/assignments.controller.js
+//
+// Este era el único controller con try/catch manual: devolvía `{ data }` o
+// `{ error }` en vez del `{ ok, data }` del resto de la API, y leía
+// `err.statusCode` cuando ApiError expone `status`, así que todo error de
+// negocio (un 404, un 409 de asignación duplicada) salía como 500.
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AssignmentsService } from '../services/assignments.service.js';
+import { ok } from '../utils/ApiResponse.js';
 
-export async function listAllAssignments(req, res) {
-  try {
-    const data = await AssignmentsService.listAll(req); // <- pasar req
-    res.json({ data });
-  } catch (err) {
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-}
+export const listAllAssignments = asyncHandler(async (req, res) => {
+  const data = await AssignmentsService.listAll({ actor: req.user });
+  return ok(res, data);
+});
 
+export const listAssignments = asyncHandler(async (req, res) => {
+  const data = await AssignmentsService.list({
+    conversationId: req.params.conversationId,
+  });
+  return ok(res, data);
+});
 
-export async function listAssignments(req, res) {
-  try {
-    const data = await AssignmentsService.list(req);
-    res.json({ data });
-  } catch (err) {
-    console.error("Error listAssignments:", err);
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-}
+export const getAssignment = asyncHandler(async (req, res) => {
+  const data = await AssignmentsService.get({ id: req.params.id });
+  return ok(res, data);
+});
 
-export async function getAssignment(req, res) {
-  try {
-    const data = await AssignmentsService.get(req);
-    res.json({ data });
-  } catch (err) {
-    console.error("Error getAssignment:", err);
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-}
+export const createAssignment = asyncHandler(async (req, res) => {
+  const data = await AssignmentsService.create(req.body ?? {});
+  return res.status(201).json({ ok: true, data });
+});
 
-export async function createAssignment(req, res) {
-  try {
-    const data = await AssignmentsService.create(req);
-    res.status(201).json({ data });
-  } catch (err) {
-    console.error("Error createAssignment:", err);
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-}
+export const updateAssignment = asyncHandler(async (req, res) => {
+  const data = await AssignmentsService.update({
+    id: req.params.id,
+    data: req.body ?? {},
+  });
+  return ok(res, data);
+});
 
-export async function updateAssignment(req, res) {
-  try {
-    const data = await AssignmentsService.update(req);
-    res.json({ data });
-  } catch (err) {
-    console.error("Error updateAssignment:", err);
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-}
-
-export async function deleteAssignment(req, res) {
-  try {
-    const data = await AssignmentsService.remove(req);
-    res.json({ data });
-  } catch (err) {
-    console.error("Error deleteAssignment:", err);
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-}
+export const deleteAssignment = asyncHandler(async (req, res) => {
+  const data = await AssignmentsService.remove({ id: req.params.id });
+  return ok(res, data);
+});

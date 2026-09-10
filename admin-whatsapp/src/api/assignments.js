@@ -1,46 +1,29 @@
 import { api } from "./client";
 
-export const AssignmentsApi = {
-  list: async () => {
-    const token = localStorage.getItem("token"); // o donde guardes el JWT
-    const res = await api.get("/assignments", {
-      headers: { 
-        "Authorization": `Bearer ${token}`,
-        "Cache-Control": "no-cache"
-      },
-    });
-    return Array.isArray(res.data) ? res.data : res.data?.data || [];
-  },
+// `api` ya adjunta el token y devuelve el JSON parseado ({ ok, data, meta }),
+// así que aquí no se pasan cabeceras ni se accede a `res.data.data`: ese
+// doble salto venía de tratar al cliente como si fuera axios y hacía que
+// create/update/delete devolvieran siempre undefined.
+const unwrapList = (res) => (Array.isArray(res?.data) ? res.data : []);
 
-  listByConversation: async (conversationId) => {
-    const token = localStorage.getItem("token");
-    const res = await api.get(`/assignments/conversation/${conversationId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return Array.isArray(res.data) ? res.data : res.data?.data || [];
-  },
+export const AssignmentsApi = {
+  list: async () => unwrapList(await api.get("/assignments")),
+
+  listByConversation: async (conversationId) =>
+    unwrapList(await api.get(`/assignments/conversation/${conversationId}`)),
 
   create: async ({ conversation_id, user_id, status }) => {
-    const token = localStorage.getItem("token");
-    const res = await api.post("/assignments", { conversation_id, user_id, status }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.data?.data;
+    const res = await api.post("/assignments", { conversation_id, user_id, status });
+    return res?.data;
   },
 
   update: async (id, payload) => {
-    const token = localStorage.getItem("token");
-    const res = await api.put(`/assignments/${id}`, payload, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.data?.data;
+    const res = await api.put(`/assignments/${id}`, payload);
+    return res?.data;
   },
 
   delete: async (id) => {
-    const token = localStorage.getItem("token");
-    const res = await api.delete(`/assignments/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.data?.data;
+    const res = await api.del(`/assignments/${id}`);
+    return res?.data;
   },
 };

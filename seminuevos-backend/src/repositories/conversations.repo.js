@@ -116,3 +116,51 @@ export const ConversationsRepo = {
     };
   },
 };
+
+/**
+ * Consultas que consume el job de seguimiento automático.
+ *
+ * Viven en la capa de repositorio (y no dentro del job) para que el SQL siga
+ * concentrado en un solo lugar por agregado: el job orquesta, no habla con
+ * la base directamente.
+ */
+export const FollowupRepo = {
+  /**
+   * Conversaciones activas cuyo último mensaje lo mandó el bot hace más de
+   * `afterHours` horas y a las que todavía no se les envió el recordatorio.
+   *
+   * El filtro de antigüedad se resuelve en SQL: antes se traían todas las
+   * conversaciones activas y se descartaban en memoria una por una.
+   */
+  async findPendingReminders({ afterHours }) {
+    const query = `
+      SELECT c.id       AS conversation_id,
+             cu.whatsapp_id AS phone,
+             m.created_at
+      FROM conversations c
+      JOIN customers cu ON cu.id = c.customer_id
+      JOIN LATERAL (
+        SELECT sender, created_at
+        FROM messages
+        WHERE conversation_id = c.id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) m ON TRUE
+      WHERE c.status = 'active'
+        AND COALESCE(c.reminder_sent, FALSE) = FALSE
+        AND cu.whatsapp_id IS NOT NULL
+        AND m.sender = 'bot'
+        AND m.created_at < NOW() - ($1 || ' hours')::interval;
+    `;
+    const { rows } = await pool.query(query, [String(afterHours)]);
+    return rows;
+  },
+
+  async markReminderSent(conversationId) {
+    const { rowCount } = await pool.query(
+      `UPDATE conversations SET reminder_sent = TRUE WHERE id = $1`,
+      [conversationId]
+    );
+    return rowCount > 0;
+  },
+};

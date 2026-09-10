@@ -1,18 +1,17 @@
 // src/services/slots.service.js
 import { SlotsRepo } from '../repositories/slots.repo.js';
+import { ApiError } from '../utils/ApiError.js';
 
 export const SlotsService = {
-  async list(req) {
-    const weekday = req.query.weekday ? Number(req.query.weekday) : null;
-    const active = req.query.active ? req.query.active === 'true' : null;
+  /** @param {{ weekday?: number|null, active?: boolean|null }} input */
+  async list({ weekday = null, active = null } = {}) {
     return SlotsRepo.list({ weekday, active });
   },
 
-  async availableByDate(req) {
-    const { date } = req.query; // YYYY-MM-DD
-    if (!date) {
-      throw new Error('Debes especificar ?date=YYYY-MM-DD');
-    }
+  /** @param {{ date: string }} input - fecha en formato YYYY-MM-DD */
+  async availableByDate({ date }) {
+    // Falta un parámetro de la petición: es un 400, no un 500.
+    if (!date) throw new ApiError(400, 'Debes especificar ?date=YYYY-MM-DD');
     return SlotsRepo.availableForDate(date);
-  }
+  },
 };

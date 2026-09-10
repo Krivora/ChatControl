@@ -1,0 +1,22 @@
+node_modules
+dist
+coverage
+
+# Variables de entorno: nunca se versionan. Usar .env.example como plantilla.
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Sistema / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Archivos temporales
+*copy*.json

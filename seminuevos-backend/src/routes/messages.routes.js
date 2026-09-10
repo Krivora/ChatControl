@@ -1,9 +1,18 @@
-import express from "express";
+// src/routes/messages.routes.js
+import { Router } from "express";
 import { createMessage, listMessagesByConversation } from "../controllers/messages.controller.js";
+import { requireAuth } from "../middlewares/auth.js";
 
-const router = express.Router();
+const r = Router();
 
-router.post("/", createMessage);
-router.get("/", listMessagesByConversation); // ✅ Esta línea permite GET /messages?conversation_id=2
+// El historial de mensajes es información del cliente y el alta permite
+// inyectar mensajes en una conversación: ambos requieren sesión.
+r.use(requireAuth);
 
-export default router;
+// POST /api/messages
+r.post("/", createMessage);
+
+// GET /api/messages?conversation_id=2
+r.get("/", listMessagesByConversation);
+
+export default r;

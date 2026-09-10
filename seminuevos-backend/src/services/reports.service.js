@@ -184,11 +184,14 @@ export const ReportsService = {
 
   // Un solo endpoint para todo el tablero: evita seis peticiones en paralelo
   // desde el navegador cada vez que se mueve el rango de fechas.
-  async overview(req) {
-    const range = parseRange(req.query);
+  /**
+   * @param {{ from?: string, to?: string, granularity?: string }} input
+   */
+  async overview({ from, to, granularity: requested } = {}) {
+    const range = parseRange({ from, to });
     const previous = previousRange(range);
-    const granularity = GRANULARITIES.includes(req.query.granularity)
-      ? req.query.granularity
+    const granularity = GRANULARITIES.includes(requested)
+      ? requested
       : autoGranularity(range);
 
     const [
@@ -246,16 +249,22 @@ export const ReportsService = {
   },
 
   // Dataset tabular para explorar y exportar.
-  async dataset(req) {
-    const type = String(req.query.type || 'leads');
+  /**
+   * @param {{ type?: string, from?: string, to?: string, q?: string,
+   *           page?: number|string, pageSize?: number|string }} input
+   */
+  async dataset({ type: requestedType, from, to, q: rawQ, page: rawPage, pageSize: rawPageSize } = {}) {
+    const type = String(requestedType || 'leads');
     if (!isDatasetType(type)) {
       throw new ApiError(400, `Tipo de reporte no válido: ${type}`);
     }
 
-    const range = parseRange(req.query);
-    const page = Math.max(1, Number(req.query.page || 1));
-    const pageSize = Math.min(MAX_EXPORT_ROWS, Math.max(1, Number(req.query.pageSize || 50)));
-    const q = String(req.query.q || '').trim() || null;
+    const range = parseRange({ from, to });
+    // La exportación usa su propio tope (MAX_EXPORT_ROWS), mucho mayor que el
+    // de la paginación normal, así que no reutiliza parsePagination.
+    const page = Math.max(1, Number(rawPage) || 1);
+    const pageSize = Math.min(MAX_EXPORT_ROWS, Math.max(1, Number(rawPageSize) || 50));
+    const q = String(rawQ || '').trim() || null;
 
     const { rows, total } = await DatasetsRepo.query(type, {
       ...range,

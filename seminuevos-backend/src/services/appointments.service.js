@@ -1,57 +1,54 @@
 // src/services/appointments.service.js
 import { AppointmentsRepo } from '../repositories/appointments.repo.js';
-import { parsePagination } from '../utils/pagination.js';
 import { ApiError } from '../utils/ApiError.js';
 
 export const AppointmentsService = {
-  async list(req) {
-    const { limit, offset, page, pageSize } = parsePagination(req);
-    const { dateFrom, dateTo, status, statuses, q, order } = req.query;
-
-    // `statuses` llega como lista separada por comas: pending,confirmed,...
-    const statusList = statuses
-      ? String(statuses).split(',').map(s => s.trim()).filter(Boolean)
-      : undefined;
-
-    const filters = { dateFrom, dateTo, status, statuses: statusList, q };
+  /**
+   * @param {{
+   *   limit: number, offset: number, page: number, pageSize: number,
+   *   filters?: { dateFrom?: string, dateTo?: string, status?: string, statuses?: string[], q?: string },
+   *   order?: string
+   * }} input
+   */
+  async list({ limit, offset, page, pageSize, filters = {}, order }) {
+    const { dateFrom, dateTo, status, statuses, q } = filters;
 
     const [items, total, counts] = await Promise.all([
-      AppointmentsRepo.list({ ...filters, order, limit, offset }),
-      AppointmentsRepo.count(filters),
-      AppointmentsRepo.countsByStatus({ dateFrom, dateTo, q })
+      AppointmentsRepo.list({ dateFrom, dateTo, status, statuses, q, order, limit, offset }),
+      AppointmentsRepo.count({ dateFrom, dateTo, status, statuses, q }),
+      AppointmentsRepo.countsByStatus({ dateFrom, dateTo, q }),
     ]);
 
     return { items, meta: { page, pageSize, total, counts } };
   },
 
-  async get(req) {
-    const { id } = req.params;
+  /** @param {{ id: string|number }} input */
+  async get({ id }) {
     const appt = await AppointmentsRepo.getById(id);
     if (!appt) throw new ApiError(404, 'Cita no encontrada');
     return appt;
   },
 
-  async create(req) {
-    const data = req.body;
+  /** @param {object} data */
+  async create(data) {
     return AppointmentsRepo.create(data);
   },
 
-  async update(req) {
-    const { id } = req.params;
-    const updated = await AppointmentsRepo.update(id, req.body);
+  /** @param {{ id: string|number, data: object }} input */
+  async update({ id, data }) {
+    const updated = await AppointmentsRepo.update(id, data);
     if (!updated) throw new ApiError(404, 'Cita no encontrada para actualizar');
     return updated;
   },
 
-  async remove(req) {
-    const { id } = req.params;
+  /** @param {{ id: string|number }} input */
+  async remove({ id }) {
     await AppointmentsRepo.delete(id);
     return { success: true };
   },
 
-  // 🔹 NUEVO
-  async getDatesWithAppointments(req) {
-    const { dateFrom, dateTo, status } = req.query;
+  /** @param {{ dateFrom?: string, dateTo?: string, status?: string }} input */
+  async getDatesWithAppointments({ dateFrom, dateTo, status } = {}) {
     return AppointmentsRepo.getDatesWithAppointments({ dateFrom, dateTo, status });
-  }
+  },
 };

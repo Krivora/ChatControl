@@ -39,8 +39,16 @@ export function useConversationDetail(conversationId) {
     // Ojo: NO pasar `${BASE}` aquí — socket.io interpreta "/api" como
     // namespace, no como URL, y nunca llegarían los eventos.
     // En desarrollo se apunta al backend con VITE_SOCKET_URL.
-    const socket = io(import.meta.env.VITE_SOCKET_URL || undefined);
+    // El backend valida el JWT en el handshake: sin auth.token la conexión
+    // se rechaza y el chat deja de recibir mensajes en vivo.
+    const socket = io(import.meta.env.VITE_SOCKET_URL || undefined, {
+      auth: { token: localStorage.getItem("token") },
+    });
     socketRef.current = socket;
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket rechazado:", err.message);
+    });
 
     // 🔊 Unirse al canal de esta conversación
     socket.emit("join_conversation", conversationId);

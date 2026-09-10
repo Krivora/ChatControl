@@ -1,25 +1,19 @@
 // src/services/conversations.service.js
-import { ConversationsRepo } from "../repositories/conversations.repo.js";
-import { parsePagination } from "../utils/pagination.js";
+import { ConversationsRepo } from '../repositories/conversations.repo.js';
 
 export const ConversationsService = {
-  async list(req) {
-    const { limit, offset, page, pageSize } = parsePagination(req);
-
+  /** @param {{ limit: number, offset: number, page: number, pageSize: number }} input */
+  async list({ limit, offset, page, pageSize }) {
     const [items, total] = await Promise.all([
       ConversationsRepo.listWithLastMessage({ limit, offset }),
       ConversationsRepo.count(),
     ]);
 
-    return {
-      items,
-      meta: { page, pageSize, total },
-    };
+    return { items, meta: { page, pageSize, total } };
   },
 
-  async getFull(req) {
-    const { id } = req.params;
-    const data = await ConversationsRepo.getFullById(id);
-    return data;
+  /** @param {{ id: string|number }} input */
+  async getFull({ id }) {
+    return ConversationsRepo.getFullById(id);
   },
 };

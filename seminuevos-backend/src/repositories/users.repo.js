@@ -18,6 +18,13 @@ export const UsersRepo = {
     return rows;
   },
 
+  async count() {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM users WHERE deleted_at IS NULL`
+    );
+    return rows[0].total;
+  },
+
   async getById(id) {
     const { rows } = await pool.query(`
       SELECT

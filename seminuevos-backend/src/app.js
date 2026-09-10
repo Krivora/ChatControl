@@ -1,33 +1,54 @@
-import express from "express";
-import cors from "cors";
-import morgan from "morgan";
-import routes from "./routes/index.js";
-import { notFound, errorHandler } from "./middlewares/errorHandler.js";
-import messagesRoutes from "./routes/messages.routes.js";
-import whatsappRoutes from "./routes/whatsapp.routes.js";
+// src/app.js
+//
+// Sólo el ensamblado de la aplicación HTTP: middlewares, rutas y manejo de
+// errores. Ningún efecto secundario de arranque (base de datos, sockets,
+// jobs) vive aquí — de eso se ocupa server.js. Así este módulo se puede
+// importar en un test sin levantar infraestructura.
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 
-// 👇 Importamos el job de recordatorio (se ejecuta en segundo plano)
-import "./jobs/whatsappAutoFollowup.js";
+import { env } from './config/env.js';
+import routes from './routes/index.js';
+import { notFound, errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
-app.use(cors());
-app.use(express.json({ limit: "1mb" }));
-app.use(morgan("dev"));
+// Detrás de Nginx o del balanceador del proveedor: necesario para que el
+// rate limiting y los logs vean la IP real del cliente y no la del proxy.
+app.set('trust proxy', 1);
 
-// ✅ Healthcheck
-app.get("/health", (req, res) => res.json({ ok: true }));
+app.use(helmet());
+app.use(compression());
 
-// ✅ Rutas principales
-app.use("/api", routes);
+// Lista blanca de orígenes. Antes era `cors()` sin argumentos, es decir
+// cualquier sitio web podía llamar a la API con la sesión del navegador.
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Sin cabecera Origin: peticiones servidor a servidor, curl, healthchecks.
+      if (!origin) return callback(null, true);
+      if (env.CORS_ORIGINS.length === 0 && !env.isProd) return callback(null, true);
+      if (env.CORS_ORIGINS.includes(origin)) return callback(null, true);
+      return callback(new Error(`Origen no permitido por CORS: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
-// ✅ Rutas de mensajes
-app.use("/api/messages", messagesRoutes);
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan(env.isProd ? 'combined' : 'dev'));
 
-// ✅ Rutas de WhatsApp
-app.use("/api/whatsapp", whatsappRoutes);
+// Healthcheck: fuera de /api y sin autenticación, lo consulta el orquestador.
+app.get('/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
 
-// ⚠️ Middlewares finales
+// Un único punto de montaje. Antes /api/messages y /api/whatsapp se montaban
+// dos veces (aquí y dentro de routes/index.js), lo que dejaba un árbol de
+// rutas duplicado y fácil de desincronizar al añadir middlewares.
+app.use('/api', routes);
+
 app.use(notFound);
 app.use(errorHandler);
 

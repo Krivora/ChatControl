@@ -13,7 +13,11 @@ import slots from './slots.routes.js';
 import users from './users.routes.js';
 import whatsapp from './whatsapp.routes.js';
 
+import { apiLimiter } from '../middlewares/rateLimit.js';
+
 const router = Router();
+
+router.use(apiLimiter);
 
 // De momento vacío, luego importamos las rutas de customers, users, etc.
 router.get('/', (req, res) => {
@@ -26,6 +30,7 @@ router.use('/assignments', assignments);
 router.use('/customers', customers);
 router.use('/conversations', conversations);
 router.use('/contents', contents);
+router.use('/messages', messagesRoutes);
 router.use('/reports', reports);
 
 router.use('/slots', slots);
